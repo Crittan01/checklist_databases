@@ -6,7 +6,6 @@
   gather_facts: true
   vars:
     connectivity_results: []
-    target_database: "{{ target_database | default('') }}"
 
   tasks:
     - name: "Validar conectividad {{ item.key }}"
@@ -18,7 +17,7 @@
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
-      when: target_database == '' or item.key == target_database
+      when: target_database is not defined or target_database == '' or item.key == target_database
 
   post_tasks:
     - name: "Mostrar resultado de conectividad"

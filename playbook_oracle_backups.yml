@@ -7,7 +7,6 @@
   vars:
     connectivity_results: []
     backup_results: []
-    target_database: "{{ target_database | default('') }}"
 
   tasks:
     # Primero verificar conectividad
@@ -18,9 +17,9 @@
       ansible.builtin.include_role:
         name: oracle_conn
       vars:
-        oracle_connectivity_current_database_key: "{{ item.key }}"
-        oracle_connectivity_current_database: "{{ item.value }}"
-      when: target_database == '' or item.key == target_database
+        oracle_conn_current_database_key: "{{ item.key }}"
+        oracle_conn_current_database: "{{ item.value }}"
+      when: target_database is not defined or target_database == '' or item.key == target_database
 
     # Validar backups solo en DBs conectadas
     - name: "Validar backups {{ item.instancia_key }}"
@@ -33,16 +32,6 @@
         oracle_bk_current_database_key: "{{ item.instancia_key }}"
         oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
 
-    # GENERAR REPORTE HTML ESPECÍFICO BACKUPS
-    - name: "Generar reporte HTML de backups"
-      ansible.builtin.include_role:
-        name: inventory
-      vars:
-        inventory_report_connectivity_results: "{{ connectivity_results }}"
-        inventory_report_backup_results: "{{ backup_results }}"
-        inventory_report_job_results: []
-        inventory_report_oracle_databases: "{{ oracle_databases }}"
-
   post_tasks:
     - name: "Mostrar resultado de backups"
       ansible.builtin.debug:
@@ -51,7 +40,8 @@
           - "Instancia: {{ item.instancia_key }}"
           - "Backups encontrados: {{ item.backup_data | length }}"
           - "Backups fallidos: {{ item.backup_errors | length }}"
-          - "Sin ARCHIVELOG 12h: {{ item.backup_no_archivelog_12h | length }}"
+          - "Sin ARCHIVELOG 12h: {{ item.no_archivelog_in_12h | default(false) }}"
+          - "Estado: {{ 'CRÍTICO' if item.backup_errors | length > 0 else ('ADVERTENCIA' if item.no_archivelog_in_12h | default(false) else 'OK') }}"
       loop: "{{ backup_results }}"
       loop_control:
         label: "{{ item.instancia_key }}"
