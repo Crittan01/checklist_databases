@@ -1,12 +1,12 @@
 ---
 # tasks file for roles/oracle_backups
-- name: "Validar backups {{ current_db_key }}"
+- name: "Validar backups últimas 12 horas en {{ oracle_backups_current_database_key }}"
   opitzconsulting.ansible_oracle.oracle_sql:
-    hostname: "{{ current_db.direccion_ip }}"
-    port: "{{ current_db.puerto }}"
-    service_name: "{{ current_db.cadena_tns }}"
-    username: "{{ current_db.usuario }}"
-    password: "{{ current_db.password }}"
+    hostname: "{{ oracle_backups_current_database.direccion_ip }}"
+    port: "{{ oracle_backups_current_database.puerto }}"
+    service_name: "{{ oracle_backups_current_database.cadena_tns }}"
+    username: "{{ oracle_backups_current_database.usuario }}"
+    password: "{{ oracle_backups_current_database.password }}"
     sql: |
       SELECT
         vi.host_name as HOST,
@@ -22,17 +22,73 @@
       WHERE rbd.start_time > sysdate - 0.5
       ORDER BY rbd.start_time
     mode: normal
-  register: backup_result
+  register: backup_validation_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Registrar resultado {{ current_db_key }}"
+- name: "Analizar backups individualmente {{ oracle_backups_current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "=== BACKUP INDIVIDUAL ANÁLISIS ==="
+      - "Host: {{ item[0] | default('N/A') }}"
+      - "Instancia: {{ item[1] | default('N/A') }}"
+      - "Inicio: {{ item[2] | default('N/A') }}"
+      - "Fin: {{ item[3] | default('N/A') }}"
+      - "Tipo: {{ item[4] | default('N/A') }}"
+      - "Estado: {{ item[5] | default('N/A') }}"
+      - "Alerta Individual: {% if item[5] == 'FAILED' %}❌ ERROR - Backup falló{% else %}✅ OK - Estado correcto{% endif %}"
+  loop: "{{ backup_validation_result.query_result | default([]) }}"
+  loop_control:
+    label: "{{ item[1] | default('N/A') }} - {{ item[2] | default('N/A') }}"
+  when: not (backup_validation_result.failed | default(true))
+
+- name: "Procesar resultados de backups {{ oracle_backups_current_database_key }}"
   ansible.builtin.set_fact:
-    backup_results: "{{ backup_results + [result_item] }}"
+    backup_results: "{{ backup_results + [backup_item] }}"
   vars:
-    result_item:
-      instancia: "{{ current_db_key }}"
-      exitoso: "{{ not (backup_result.failed | default(true)) }}"
-      error: "{{ backup_result.msg | default('') if backup_result.failed | default(false) else '' }}"
-      data: "{{ backup_result.query_result | default([]) if not (backup_result.failed | default(true)) else [] }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+    validation_successful: "{{ not (backup_validation_result.failed | default(true)) }}"
+    backup_data: "{{ backup_validation_result.query_result | default([]) if validation_successful else [] }}"
+
+    # LÓGICA CORREGIDA: Evaluar período completo
+    archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
+    has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"
+
+    backup_item:
+      instancia_key: "{{ oracle_backups_current_database_key }}"
+      instancia: "{{ oracle_backups_current_database.instancia }}"
+      host: "{{ oracle_backups_current_database.host }}"
+      direccion_ip: "{{ oracle_backups_current_database.direccion_ip }}"
+
+      backup_validation_successful: "{{ validation_successful }}"
+      backup_validation_error: "{{ backup_validation_result.msg | default('') if backup_validation_result.failed | default(false) else '' }}"
+
+      # TODOS los backups (sin filtrar)
+      backup_data: "{{ backup_data }}"
+
+      # ALERTAS CORREGIDAS
+      backup_errors: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
+
+      # NUEVA LÓGICA: Una sola alerta si NO hay ARCHIVELOG en todo el período
+      no_archivelog_in_12h: "{{ not has_archivelog_in_12h }}"
+      archivelog_count: "{{ archivelog_backups | length }}"
+
+      # Contadores
+      total_backups: "{{ backup_data | length }}"
+      failed_backups: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list | length }}"
+      successful_backups: "{{ backup_data | selectattr('5', 'ne', 'FAILED') | list | length }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Resumen de backups {{ oracle_backups_current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "=== RESUMEN BACKUPS {{ oracle_backups_current_database_key }} ==="
+      - "Validación: {{ 'EXITOSA' if not (backup_validation_result.failed | default(true)) else 'ERROR' }}"
+      - "Total backups encontrados: {{ backup_validation_result.query_result
+        | default([]) | length if not (backup_validation_result.failed | default(true)) else 0 }}"
+      - "Con ERROR (FAILED): {{ backup_validation_result.query_result | default([])
+        | selectattr('5', 'equalto', 'FAILED') | list | length if not (backup_validation_result.failed | default(true)) else 0 }}"
+      - "ARCHIVELOG encontrados: {{ backup_validation_result.query_result
+        | default([]) | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length if not (backup_validation_result.failed | default(true)) else 0 }}"
+      - "ALERTA PERÍODO: {{ 'SIN ARCHIVELOG EN 12H' if (backup_validation_result.query_result
+        | default([]) | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length == 0) and not (backup_validation_result.failed | default(true)) else 'OK' }}"

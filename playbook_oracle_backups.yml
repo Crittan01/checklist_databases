@@ -1,6 +1,6 @@
 ---
 # Playbook modular - Solo Validación de Backups
-- name: Oracle Database Backups Only
+- name: Oracle Database Backups Validation Only
   hosts: localhost
   connection: local
   gather_facts: true
@@ -10,38 +10,49 @@
     target_database: "{{ target_database | default('') }}"
 
   tasks:
-    # Conectividad primero
-    - name: "Conectividad {{ item.key }}"
+    # Primero verificar conectividad
+    - name: "Verificar conectividad {{ item.key }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_connectivity
       vars:
-        current_db_key: "{{ item.key }}"
-        current_db: "{{ item.value }}"
-      loop: "{{ oracle_databases | dict2items }}"
+        oracle_connectivity_current_database_key: "{{ item.key }}"
+        oracle_connectivity_current_database: "{{ item.value }}"
       when: target_database == '' or item.key == target_database
 
-    # Solo backups en conectadas
-    - name: "Backups {{ item.instancia }}"
+    # Validar backups solo en DBs conectadas
+    - name: "Validar backups {{ item.instancia_key }}"
+      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_backups
       vars:
-        current_db_key: "{{ item.instancia }}"
-        current_db: "{{ oracle_databases[item.instancia] }}"
-      loop: "{{ connectivity_results | selectattr('conectado', 'equalto', true) | list }}"
+        oracle_backups_current_database_key: "{{ item.instancia_key }}"
+        oracle_backups_current_database: "{{ oracle_databases[item.instancia_key] }}"
 
-    # Reporte específico
-    - name: "Generar reporte backups"
+    # GENERAR REPORTE HTML ESPECÍFICO BACKUPS
+    - name: "Generar reporte HTML de backups"
       ansible.builtin.include_role:
         name: inventory
       vars:
-        job_results: []
-        diskgroup_results: []
+        inventory_report_connectivity_results: "{{ connectivity_results }}"
+        inventory_report_backup_results: "{{ backup_results }}"
+        inventory_report_job_results: []
+        inventory_report_oracle_databases: "{{ oracle_databases }}"
 
   post_tasks:
-    - name: "Resumen backups"
+    - name: "Mostrar resultado de backups"
       ansible.builtin.debug:
         msg:
-          - "Instancias validadas: {{ backup_results | length }}"
-          - "Backups fallidos: {{ backup_results | map(attribute='data') | flatten | selectattr('5', 'equalto', 'FAILED') | list | length }}"
-          - "Sin ARCHIVELOG 12h: {{ backup_results | selectattr('data', 'defined') | selectattr('data', 'length') | map(attribute='data')
-            | select('selectattr', '4', 'equalto', 'ARCHIVELOG') | select('length') | select('equalto', 0) | list | length }}"
+          - "=== RESULTADO VALIDACIÓN BACKUPS ==="
+          - "Instancia: {{ item.instancia_key }}"
+          - "Backups encontrados: {{ item.backup_data | length }}"
+          - "Backups fallidos: {{ item.backup_errors | length }}"
+          - "Sin ARCHIVELOG 12h: {{ item.backup_no_archivelog_12h | length }}"
+      loop: "{{ backup_results }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: backup_results | length > 0

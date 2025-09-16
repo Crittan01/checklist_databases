@@ -1,48 +1,35 @@
-- name: "Crear directorio reportes"
+---
+# tasks file for roles/inventory
+- name: "Crear directorio para reportes"
   ansible.builtin.file:
     path: "{{ ansible_env.PWD }}/reports"
     state: directory
     mode: "0755"
 
-- name: "Calcular estadísticas básicas"
+- name: "Calcular estadísticas del reporte"
   ansible.builtin.set_fact:
-    total_databases: "{{ oracle_databases.keys() | list | length }}"
-    successful_connections: "{{ connectivity_results | default([]) | selectattr('conectado', 'equalto', true) | list | length }}"
-    failed_connections: "{{ connectivity_results | default([]) | selectattr('conectado', 'equalto', false) | list | length }}"
+    total_databases: "{{ inventory_report_oracle_databases.keys() | list | length | int }}"
+    successful_connections: "{{ inventory_report_connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length | int }}"
+    failed_connections: "{{ inventory_report_connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length | int }}"
 
-    # Inicializar contadores
-    total_backup_errors: 0
-    instances_no_archivelog_12h: 0
-    total_broken_jobs: 0
-    total_jobs_with_failures: 0
-    total_diskgroup_alerts: "{{ diskgroup_results | default([]) | map(attribute='data') | flatten | length }}"
+    # BACKUPS: Contar errores individuales
+    total_backup_errors: "{{ inventory_report_backup_results | default([]) | map(attribute='backup_errors') | flatten | length | int }}"
 
-# Calcular alertas de backups con loop simple
-- name: "Contar alertas de backups {{ item.instancia }}"
-  ansible.builtin.set_fact:
-    total_backup_errors: "{{ total_backup_errors | int + (item.data | selectattr('5', 'equalto', 'FAILED') | list | length) }}"
-    instances_no_archivelog_12h:
-      "{{ instances_no_archivelog_12h | int + (1 if (item.exitoso
-      and (item.data | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length == 0)) else 0) }}"
-  loop: "{{ backup_results | default([]) }}"
-  loop_control:
-    label: "{{ item.instancia }}"
+    # BACKUPS: Contar instancias SIN ARCHIVELOG en período completo
+    instances_no_archivelog_12h: "{{ inventory_report_backup_results
+      | default([]) | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length | int }}"
 
-# Calcular alertas de jobs con loop simple
-- name: "Contar alertas de jobs {{ item.instancia }}"
-  ansible.builtin.set_fact:
-    total_broken_jobs: "{{ total_broken_jobs | int + (item.data | selectattr('3', 'equalto', 'Y') | list | length) }}"
-    total_jobs_with_failures: "{{ total_jobs_with_failures | int + (item.data | selectattr('2', 'greaterthan', 0) | list | length) }}"
-  loop: "{{ job_results | default([]) }}"
-  loop_control:
-    label: "{{ item.instancia }}"
+    total_broken_jobs: "{{ inventory_report_job_results | default([]) | map(attribute='broken_jobs') | flatten | length | int }}"
+    total_jobs_with_failures: "{{ inventory_report_job_results | default([]) | map(attribute='jobs_with_failures') | flatten | length | int }}"
 
-- name: "Calcular porcentaje conectividad y totales"
+- name: "Calcular porcentaje de conectividad"
   ansible.builtin.set_fact:
     connectivity_percentage: "{{ ((successful_connections | int / total_databases | int * 100) | round | int) if total_databases | int > 0 else 0 }}"
+
+- name: "Calcular total de alertas"
+  ansible.builtin.set_fact:
     total_backup_alerts: "{{ (total_backup_errors | int) + (instances_no_archivelog_12h | int) }}"
-    total_alerts: "{{ (failed_connections | int) + (total_backup_errors | int)
-      + (instances_no_archivelog_12h | int) + (total_broken_jobs | int) + (total_diskgroup_alerts | int) }}"
+    total_alerts: "{{ (failed_connections | int) + (total_backup_errors | int) + (instances_no_archivelog_12h | int) + (total_broken_jobs | int) }}"
 
 - name: "Generar reporte HTML Oracle"
   ansible.builtin.template:
@@ -54,30 +41,33 @@
     execution_date: "{{ ansible_date_time.date }}"
     execution_time: "{{ ansible_date_time.time }}"
 
-    # Pasar datos con nombres únicos (evita conflictos Jinja2)
-    connectivity_data: "{{ connectivity_results | default([]) }}"
-    backup_data: "{{ backup_results | default([]) }}"
-    job_data: "{{ job_results | default([]) }}"
-    diskgroup_data: "{{ diskgroup_results | default([]) }}"
+    connectivity_results: "{{ inventory_report_connectivity_results | default([]) }}"
+    backup_results: "{{ inventory_report_backup_results | default([]) }}"
+    job_results: "{{ inventory_report_job_results | default([]) }}"
 
-    # Estadísticas pre-calculadas (evita cálculos complejos en template)
     stats:
-      total_dbs: "{{ total_databases }}"
-      successful_conns: "{{ successful_connections }}"
-      failed_conns: "{{ failed_connections }}"
-      connectivity_percent: "{{ connectivity_percentage }}"
-      backup_errors_count: "{{ total_backup_errors }}"
-      instances_no_archivelog_count: "{{ instances_no_archivelog_12h }}"
-      total_backup_alerts: "{{ total_backup_alerts }}"
-      broken_jobs_count: "{{ total_broken_jobs }}"
-      jobs_failures_count: "{{ total_jobs_with_failures }}"
-      diskgroup_alerts_count: "{{ total_diskgroup_alerts }}"
-      total_alerts: "{{ total_alerts }}"
+      total_dbs: "{{ total_databases | int }}"
+      successful_conns: "{{ successful_connections | int }}"
+      failed_conns: "{{ failed_connections | int }}"
+      connectivity_percent: "{{ connectivity_percentage | int }}"
+      backup_errors_count: "{{ total_backup_errors | int }}"
+      instances_no_archivelog_count: "{{ instances_no_archivelog_12h | int }}"
+      # NUEVA VARIABLE CONSOLIDADA
+      total_backup_alerts: "{{ (total_backup_errors | int) + (instances_no_archivelog_12h | int) }}"
+      broken_jobs_count: "{{ total_broken_jobs | int }}"
+      jobs_failures_count: "{{ total_jobs_with_failures | int }}"
+      total_alerts: "{{ total_alerts | int }}"
 
-- name: "Mostrar resumen del reporte"
+- name: "Mostrar resumen del reporte generado"
   ansible.builtin.debug:
     msg:
-      - "Reporte generado: {{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
+      - "=== REPORTE HTML GENERADO ==="
+      - "Ubicación: {{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
       - "Total de bases de datos: {{ total_databases }}"
       - "Conectividad: {{ connectivity_percentage }}% ({{ successful_connections }}/{{ total_databases }})"
-      - "Alertas totales: {{ total_alerts }}"
+      - "Alertas encontradas:"
+      - "  - Conectividad: {{ failed_connections }} errores"
+      - "  - Backups fallidos: {{ total_backup_errors }} errores"
+      - "  - Instancias sin ARCHIVELOG 12h: {{ instances_no_archivelog_12h }} alertas"
+      - "  - Jobs broken: {{ total_broken_jobs }} errores"
+      - "  - TOTAL: {{ total_alerts }} alertas"

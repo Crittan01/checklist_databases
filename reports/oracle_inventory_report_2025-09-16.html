@@ -222,6 +222,14 @@
             border-radius: 0 4px 4px 0;
         }
         
+        .success-section {
+            background: rgba(39, 174, 96, 0.05);
+            border-left: 4px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
         .summary-stats {
             background: #f8f9fa;
             border-radius: 4px;
@@ -267,9 +275,12 @@
         <div class="header">
             <h1>Oracle Database Inventory Report</h1>
             <div class="header-info">
+                <div>
+                                                                <strong>Servidor BD:</strong> oracle7db
+                                    </div>
                 <div><strong>Ejecutado desde:</strong> oracle9awx</div>
                 <div><strong>Fecha:</strong> 2025-09-16</div>
-                <div><strong>Hora:</strong> 17:27:54</div>
+                <div><strong>Hora:</strong> 17:53:03</div>
             </div>
         </div>
         
@@ -278,27 +289,58 @@
             <div class="summary-card">
                 <h2 class="summary-title">Resumen de Conectividad</h2>
                 <div class="metric">
-                    <div class="metric-value">25%</div>
+                    <div class="metric-value">100%</div>
                     <div class="metric-label">Conectividad</div>
                 </div>
                 <table style="margin: 10px 0; box-shadow: none;">
-                    <tr><td><strong>Total Bases:</strong></td><td>4</td></tr>
-                    <tr style="background: rgba(39, 174, 96, 0.1);"><td><strong>Conectadas:</strong></td><td>1</td></tr>
-                    <tr style="background: rgba(231, 76, 60, 0.1);"><td><strong>Fallidas:</strong></td><td>0</td></tr>
+                    <tr>
+                        <td><strong>Total Bases:</strong></td>
+                        <td>4</td>
+                    </tr>
+                    <tr style="background: rgba(39, 174, 96, 0.1);">
+                        <td><strong>Conectadas:</strong></td>
+                        <td>4</td>
+                    </tr>
+                    <tr style="background: rgba(231, 76, 60, 0.1);">
+                        <td><strong>Fallidas:</strong></td>
+                        <td>0</td>
+                    </tr>
                 </table>
             </div>
             
             <div class="summary-card">
                 <h2 class="summary-title">Estado de Alertas por Dominio</h2>
                 <div class="metric">
-                    <div class="metric-value" style="color: var(--danger-color);">1</div>
+                    <div class="metric-value" style="color: var(--danger-color);">
+                        4
+                    </div>
                     <div class="metric-label">Total Alertas</div>
                 </div>
                 <table style="margin: 10px 0; box-shadow: none;">
-                    <tr><td><strong>Conectividad</strong></td><td>0 errores</td><td><span class="status-success">OK</span></td></tr>
-                    <tr><td><strong>Backups</strong></td><td>1 alertas</td><td><span class="status-warning">VERIFICAR</span></td></tr>
-                    <tr><td><strong>Jobs</strong></td><td>0 broken</td><td><span class="status-success">OK</span></td></tr>
-                    <tr><td><strong>Diskgroups</strong></td><td>0 críticos</td><td><span class="status-success">OK</span></td></tr>
+                    <thead>
+                        <tr style="background: var(--light-color); font-weight: 600;">
+                            <td><strong>OBJETO</strong></td>
+                            <td><strong>ALERTAS</strong></td>
+                            <td><strong>ESTADO</strong></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Conectividad</strong></td>
+                            <td>0 bases sin acceso</td>
+                            <td><span class="status-success">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Backups</strong></td>
+                            <td>4 alertas</td>
+                            <td><span class="status-warning">VERIFICAR</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Jobs</strong></td>
+                            <td>0 jobs broken</td>
+                            <td><span class="status-success">OK</span></td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -317,92 +359,312 @@
             
             <table>
                 <thead>
-                    <tr><th>Instancia</th><th>Host</th><th>IP:Puerto</th><th>Usuario</th><th>Estado</th><th>Timestamp</th></tr>
+                    <tr>
+                        <th>Instancia</th>
+                        <th>Host</th>
+                        <th>IP:Puerto</th>
+                        <th>TNS</th>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Timestamp</th>
+                    </tr>
                 </thead>
                 <tbody>
                                         <tr class="">
                         <td><strong>dbMayus1</strong></td>
-                        <td>192.168.20.230</td>
+                        <td>oracle7db</td>
                         <td>192.168.20.230:1521</td>
+                        <td>dbMayus1</td>
                         <td>ansible_user</td>
-                        <td><span class="status-success">CONECTADA</span></td>
-                        <td>2025-09-16 22:27:54</td>
+                        <td>
+                                                            <span class="status-success">CONECTADA</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>dbprueba</strong></td>
+                        <td>oracle7db</td>
+                        <td>192.168.20.230:1521</td>
+                        <td>dbprueba</td>
+                        <td>ansible_user</td>
+                        <td>
+                                                            <span class="status-success">CONECTADA</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>PRUEBA</strong></td>
+                        <td>oracle7db</td>
+                        <td>192.168.20.230:1521</td>
+                        <td>PRUEBA</td>
+                        <td>ansible_user</td>
+                        <td>
+                                                            <span class="status-success">CONECTADA</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>dbotro</strong></td>
+                        <td>oracle7db</td>
+                        <td>192.168.20.230:1521</td>
+                        <td>dbotro</td>
+                        <td>ansible_user</td>
+                        <td>
+                                                            <span class="status-success">CONECTADA</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
                     </tr>
                                                         </tbody>
             </table>
         </div>
         
-        <!-- Frente 2: Información Operacional -->
+        <!-- Frente 2: Información Operacional COMPLETA -->
         <div id="frente2" class="tab-content">
             <h2>Información Operacional Completa</h2>
+            <p><strong>Vista total de todos los datos operacionales sin filtros</strong> - Información completa para análisis y trazabilidad.</p>
             
-            <!-- Backups -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Backups (Últimas 12 horas)</h3>
+            <!-- TABLA CONSOLIDADA DE BACKUPS -->
+            <h3 style="color: var(--primary-color); margin-top: 30px;">Información Completa de Backups (Últimas 12 horas)</h3>
+            <div class="summary-stats">
+                <p><strong>Resumen Global:</strong> 
+                                                                Total backups: 0 | 
+                Fallidos: 0 | 
+                ARCHIVELOG: 0 | 
+                Instancias sin ARCHIVELOG: 4
+                </p>
+            </div>
+            
                         <table class="operational-table">
                 <thead>
-                    <tr><th>Instancia</th><th>Estado</th><th>Total</th><th>Exitosos</th><th>Fallidos</th><th>ARCHIVELOG</th><th>Estado ARCHIVELOG</th><th>Timestamp</th></tr>
+                    <tr>
+                        <th>Instancia</th>
+                        <th>Estado Validación</th>
+                        <th>Total Backups</th>
+                        <th>Exitosos</th>
+                        <th>Fallidos</th>
+                        <th>ARCHIVELOG</th>
+                        <th>Estado ARCHIVELOG</th>
+                        <th>Timestamp</th>
+                    </tr>
                 </thead>
                 <tbody>
-                                                                                <tr class="warning-alert">
+                                        <tr class="warning-alert">
                         <td><strong>dbMayus1</strong></td>
-                        <td><span class="status-success">EXITOSA</span></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
                         <td>0</td>
                         <td>0</td>
                         <td>0</td>
                         <td>0</td>
-                        <td><span class="status-warning">SIN ARCHIVELOG 12H</span></td>
-                        <td>2025-09-16 22:27:54</td>
+                        <td>
+                                                            <span class="status-warning">SIN ARCHIVELOG 12H</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
                     </tr>
-                                    </tbody>
+                                                            <tr class="warning-alert">
+                        <td><strong>dbprueba</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-warning">SIN ARCHIVELOG 12H</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="warning-alert">
+                        <td><strong>PRUEBA</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-warning">SIN ARCHIVELOG 12H</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="warning-alert">
+                        <td><strong>dbotro</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-warning">SIN ARCHIVELOG 12H</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                        </tbody>
             </table>
                         
-            <!-- Jobs -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado de Jobs Oracle</h3>
-                        <div class="info-box"><p>No hay datos de validación de jobs disponibles.</p></div>
-                        
-            <!-- Diskgroups -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado de Diskgroups ASM</h3>
-                        <div class="info-box"><p>No hay datos de validación de diskgroups disponibles.</p></div>
+            <!-- TABLA CONSOLIDADA DE JOBS -->
+            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado Completo de Jobs Oracle</h3>
+            <div class="summary-stats">
+                <p><strong>Resumen Global:</strong> 
+                                                                Total jobs: 0 | 
+                Broken: 0 | 
+                Con failures: 0
+                </p>
+            </div>
+            
+                        <table class="operational-table">
+                <thead>
+                    <tr>
+                        <th>Instancia</th>
+                        <th>Estado Validación</th>
+                        <th>Total Jobs</th>
+                        <th>Activos</th>
+                        <th>Broken</th>
+                        <th>Con Failures</th>
+                        <th>Estado General</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                                        <tr class="">
+                        <td><strong>dbMayus1</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-success">OPERACIONAL</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>dbprueba</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-success">OPERACIONAL</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>PRUEBA</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-success">OPERACIONAL</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                            <tr class="">
+                        <td><strong>dbotro</strong></td>
+                        <td>
+                                                            <span class="status-success">EXITOSA</span>
+                                                    </td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>
+                                                            <span class="status-success">OPERACIONAL</span>
+                                                    </td>
+                        <td>2025-09-16 22:53:03</td>
+                    </tr>
+                                                        </tbody>
+            </table>
                     </div>
         
-        <!-- Frente 3: Alertas Críticas -->
+        <!-- Frente 3: SOLO Alertas Críticas -->
         <div id="frente3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
+            <p><strong>Solo elementos que ameritan validación administrativa</strong> - Acciones requeridas para mantener operatividad.</p>
             
             
-            <!-- Conectividad -->
+            <!-- ALERTAS CRÍTICAS DE CONECTIVIDAD -->
             
-            <!-- Backups fallidos -->
+            <!-- ALERTAS CRÍTICAS DE BACKUPS FALLIDOS -->
             
-            <!-- Sin ARCHIVELOG -->
+            <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
                         <div class="warning-section">
-                <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG 12h (1)</h3>
+                <h3 style="color: var(--warning-color);">⚠️ ADVERTENCIA: Sin ARCHIVELOG en 12h (4)</h3>
+                <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
                 <table>
-                    <thead><tr><th>Instancia</th><th>Total Backups</th><th>ARCHIVELOG</th><th>Recomendación</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Instancia</th>
+                            <th>Total Backups</th>
+                            <th>ARCHIVELOG</th>
+                            <th>Recomendación</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                                                <tr class="warning-alert">
+                                                                        <tr class="warning-alert">
                             <td><strong>dbMayus1</strong></td>
                             <td>0</td>
                             <td>0</td>
-                            <td>Configurar backup ARCHIVELOG</td>
+                            <td>Configurar backup automático de ARCHIVELOG</td>
                         </tr>
-                                            </tbody>
+                                                                                                <tr class="warning-alert">
+                            <td><strong>dbprueba</strong></td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>Configurar backup automático de ARCHIVELOG</td>
+                        </tr>
+                                                                                                <tr class="warning-alert">
+                            <td><strong>PRUEBA</strong></td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>Configurar backup automático de ARCHIVELOG</td>
+                        </tr>
+                                                                                                <tr class="warning-alert">
+                            <td><strong>dbotro</strong></td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>Configurar backup automático de ARCHIVELOG</td>
+                        </tr>
+                                                                    </tbody>
                 </table>
             </div>
             
-            <!-- Jobs broken -->
-            
-            <!-- Diskgroups críticos -->
+            <!-- ALERTAS CRÍTICAS DE JOBS -->
                                 </div>
     </div>
     
     <script>
         function openTab(tabName) {
+            // Ocultar todos los contenidos
             var contents = document.getElementsByClassName('tab-content');
-            for (var i = 0; i < contents.length; i++) { contents[i].classList.remove('active'); }
+            for (var i = 0; i < contents.length; i++) {
+                contents[i].classList.remove('active');
+            }
+            
+            // Desactivar todos los botones
             var buttons = document.getElementsByClassName('tab-button');
-            for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+            }
+            
+            // Mostrar el contenido seleccionado
             document.getElementById(tabName).classList.add('active');
+            
+            // Activar el botón correspondiente
             event.target.classList.add('active');
         }
     </script>

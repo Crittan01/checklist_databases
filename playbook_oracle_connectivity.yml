@@ -9,21 +9,25 @@
     target_database: "{{ target_database | default('') }}"
 
   tasks:
-    - name: "Conectividad {{ item.key }}"
+    - name: "Validar conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_connectivity
       vars:
-        current_db_key: "{{ item.key }}"
-        current_db: "{{ item.value }}"
+        oracle_connectivity_current_database_key: "{{ item.key }}"
+        oracle_connectivity_current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
       when: target_database == '' or item.key == target_database
 
   post_tasks:
-    - name: "Resumen conectividad"
+    - name: "Mostrar resultado de conectividad"
       ansible.builtin.debug:
         msg:
-          - "Instancias probadas: {{ connectivity_results | length }}"
-          - "Conectadas: {{ connectivity_results | selectattr('conectado', 'equalto', true) | list | length }}"
-          - "Fallidas: {{ connectivity_results | selectattr('conectado', 'equalto', false) | list | length }}"
-          - "Porcentaje: {{ ((connectivity_results | selectattr('conectado', 'equalto', true) | list
-            | length / connectivity_results | length * 100) | round) if connectivity_results | length > 0 else 0 }}%"
+          - "=== RESULTADO CONECTIVIDAD ==="
+          - "Instancia: {{ item.instancia_key }}"
+          - "Estado: {{ 'CONECTADA' if item.connection_successful else 'ERROR' }}"
+          - "{% if not item.connection_successful %}Error: {{ item.connection_error }}{% endif %}"
+      loop: "{{ connectivity_results }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"

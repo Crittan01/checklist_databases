@@ -1,12 +1,12 @@
 ---
 # tasks file for roles/oracle_jobs
-- name: "Validar jobs {{ current_db_key }}"
+- name: "Validar jobs Oracle en {{ oracle_jobs_current_database_key }}"
   opitzconsulting.ansible_oracle.oracle_sql:
-    hostname: "{{ current_db.direccion_ip }}"
-    port: "{{ current_db.puerto }}"
-    service_name: "{{ current_db.cadena_tns }}"
-    username: "{{ current_db.usuario }}"
-    password: "{{ current_db.password }}"
+    hostname: "{{ oracle_jobs_current_database.direccion_ip }}"
+    port: "{{ oracle_jobs_current_database.puerto }}"
+    service_name: "{{ oracle_jobs_current_database.cadena_tns }}"
+    username: "{{ oracle_jobs_current_database.usuario }}"
+    password: "{{ oracle_jobs_current_database.password }}"
     sql: |
       SELECT
         JOB,
@@ -18,17 +18,43 @@
       FROM DBA_JOBS
       ORDER BY SCHEMA_USER, JOB
     mode: normal
-  register: jobs_result
+  register: jobs_validation_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Registrar resultado {{ current_db_key }}"
+- name: "Procesar resultados de jobs {{ oracle_jobs_current_database_key }}"
   ansible.builtin.set_fact:
-    job_results: "{{ job_results + [result_item] }}"
+    job_results: "{{ job_results + [job_item] }}"
   vars:
-    result_item:
-      instancia: "{{ current_db_key }}"
-      exitoso: "{{ not (jobs_result.failed | default(true)) }}"
-      error: "{{ jobs_result.msg | default('') if jobs_result.failed | default(false) else '' }}"
-      data: "{{ jobs_result.query_result | default([]) if not (jobs_result.failed | default(true)) else [] }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+    validation_successful: "{{ not (jobs_validation_result.failed | default(true)) }}"
+    jobs_data: "{{ jobs_validation_result.query_result | default([]) if validation_successful else [] }}"
+    job_item:
+      instancia_key: "{{ oracle_jobs_current_database_key }}"
+      instancia: "{{ oracle_jobs_current_database.instancia }}"
+      host: "{{ oracle_jobs_current_database.host }}"
+      direccion_ip: "{{ oracle_jobs_current_database.direccion_ip }}"
+
+      jobs_validation_successful: "{{ validation_successful }}"
+      jobs_validation_error: "{{ jobs_validation_result.msg | default('') if jobs_validation_result.failed | default(false) else '' }}"
+
+      jobs_data: "{{ jobs_data }}"
+      broken_jobs: "{{ jobs_data | selectattr('broken', 'equalto', 'Y') | list }}"
+      jobs_with_failures: "{{ jobs_data | selectattr('fail', 'greaterthan', 0) | list }}"
+
+      total_jobs: "{{ jobs_data | length }}"
+      broken_jobs_count: "{{ jobs_data | selectattr('broken', 'equalto', 'Y') | list | length }}"
+      jobs_with_failures_count: "{{ jobs_data | selectattr('fail', 'greaterthan', 0) | list | length }}"
+      active_jobs: "{{ jobs_data | selectattr('broken', 'equalto', 'N') | list | length }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Mostrar resumen de jobs {{ oracle_jobs_current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "Instancia: {{ oracle_jobs_current_database_key }}"
+      - "Validación: {{ 'EXITOSA' if not (jobs_validation_result.failed | default(true)) else 'ERROR' }}"
+      - "Jobs encontrados: {{ jobs_validation_result.query_result | default([]) | length if not (jobs_validation_result.failed | default(true)) else 0 }}"
+      - "Jobs broken: {{ jobs_validation_result.query_result
+        | default([]) | selectattr('broken', 'equalto', 'Y') | list | length if not (jobs_validation_result.failed | default(true)) else 0 }}"
+      - "Jobs con failures: {{ jobs_validation_result.query_result
+        | default([]) | selectattr('fail', 'greaterthan', 0) | list | length if not (jobs_validation_result.failed | default(true)) else 0 }}"
