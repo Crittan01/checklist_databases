@@ -1,0 +1,33 @@
+---
+# Playbook modular - Solo Conectividad Oracle
+- name: Oracle Database Connectivity Only
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    connectivity_results: []
+    target_database: "{{ target_database | default('') }}"
+
+  tasks:
+    - name: "Validar conectividad {{ item.key }}"
+      ansible.builtin.include_role:
+        name: oracle_connectivity
+      vars:
+        oracle_connectivity_current_database_key: "{{ item.key }}"
+        oracle_connectivity_current_database: "{{ item.value }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when: target_database == '' or item.key == target_database
+
+  post_tasks:
+    - name: "Mostrar resultado de conectividad"
+      ansible.builtin.debug:
+        msg:
+          - "=== RESULTADO CONECTIVIDAD ==="
+          - "Instancia: {{ item.instancia_key }}"
+          - "Estado: {{ 'CONECTADA' if item.connection_successful else 'ERROR' }}"
+          - "{% if not item.connection_successful %}Error: {{ item.connection_error }}{% endif %}"
+      loop: "{{ connectivity_results }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"

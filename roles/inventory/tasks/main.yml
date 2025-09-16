@@ -1,0 +1,80 @@
+---
+# tasks file for roles/inventory
+- name: "Crear directorio para reportes"
+  ansible.builtin.file:
+    path: "{{ ansible_env.PWD }}/reports"
+    state: directory
+    mode: "0755"
+
+- name: "Calcular estadísticas del reporte"
+  ansible.builtin.set_fact:
+    total_databases: "{{ inventory_report_oracle_databases.keys() | list | length | int }}"
+    successful_connections: "{{ inventory_report_connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length | int }}"
+    failed_connections: "{{ inventory_report_connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length | int }}"
+
+    # BACKUPS: Contar errores individuales
+    total_backup_errors: "{{ inventory_report_backup_results | default([]) | map(attribute='backup_errors') | flatten | length | int }}"
+
+    # BACKUPS: Contar instancias SIN ARCHIVELOG en período completo
+    instances_no_archivelog_12h: "{{ inventory_report_backup_results
+      | default([]) | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length | int }}"
+
+    total_broken_jobs: "{{ inventory_report_job_results | default([]) | map(attribute='broken_jobs') | flatten | length | int }}"
+    total_jobs_with_failures: "{{ inventory_report_job_results | default([]) | map(attribute='jobs_with_failures') | flatten | length | int }}"
+
+    # DISKGROUPS: Contar alertas críticas
+    total_diskgroup_alerts: "{{ inventory_report_diskgroup_results | default([]) | map(attribute='diskgroups_alerts') | flatten | length | int }}"
+
+- name: "Calcular porcentaje de conectividad"
+  ansible.builtin.set_fact:
+    connectivity_percentage: "{{ ((successful_connections | int / total_databases | int * 100) | round | int) if total_databases | int > 0 else 0 }}"
+
+- name: "Calcular total de alertas"
+  ansible.builtin.set_fact:
+    total_backup_alerts: "{{ (total_backup_errors | int) + (instances_no_archivelog_12h | int) }}"
+    total_alerts: "{{ (failed_connections | int) + (total_backup_errors | int) + (instances_no_archivelog_12h | int) + (total_broken_jobs | int) }}"
+
+- name: "Generar reporte HTML Oracle"
+  ansible.builtin.template:
+    src: "oracle_inventory_report.j2"
+    dest: "{{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
+    mode: "0644"
+  vars:
+    hostname: "{{ ansible_hostname }}"
+    execution_date: "{{ ansible_date_time.date }}"
+    execution_time: "{{ ansible_date_time.time }}"
+
+    connectivity_results: "{{ inventory_report_connectivity_results | default([]) }}"
+    backup_results: "{{ inventory_report_backup_results | default([]) }}"
+    job_results: "{{ inventory_report_job_results | default([]) }}"
+    diskgroup_results: "{{ inventory_report_diskgroup_results | default([]) }}"
+
+    stats:
+      total_dbs: "{{ total_databases | int }}"
+      successful_conns: "{{ successful_connections | int }}"
+      failed_conns: "{{ failed_connections | int }}"
+      connectivity_percent: "{{ connectivity_percentage | int }}"
+      backup_errors_count: "{{ total_backup_errors | int }}"
+      instances_no_archivelog_count: "{{ instances_no_archivelog_12h | int }}"
+      # NUEVA VARIABLE CONSOLIDADA
+      total_backup_alerts: "{{ (total_backup_errors | int) + (instances_no_archivelog_12h | int) }}"
+      broken_jobs_count: "{{ total_broken_jobs | int }}"
+      jobs_failures_count: "{{ total_jobs_with_failures | int }}"
+      # DISKGROUPS
+      diskgroup_alerts_count: "{{ total_diskgroup_alerts | int }}"
+      total_alerts: "{{ total_alerts | int }}"
+
+- name: "Mostrar resumen del reporte generado"
+  ansible.builtin.debug:
+    msg:
+      - "=== REPORTE HTML GENERADO ==="
+      - "Ubicación: {{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
+      - "Total de bases de datos: {{ total_databases }}"
+      - "Conectividad: {{ connectivity_percentage }}% ({{ successful_connections }}/{{ total_databases }})"
+      - "Alertas encontradas:"
+      - "  - Conectividad: {{ failed_connections }} errores"
+      - "  - Backups fallidos: {{ total_backup_errors }} errores"
+      - "  - Instancias sin ARCHIVELOG 12h: {{ instances_no_archivelog_12h }} alertas"
+      - "  - Jobs broken: {{ total_broken_jobs }} errores"
+      - "  - Diskgroups críticos: {{ total_diskgroup_alerts }} alertas"
+      - "  - TOTAL: {{ total_alerts }} alertas"

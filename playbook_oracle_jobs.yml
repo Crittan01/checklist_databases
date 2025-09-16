@@ -1,0 +1,58 @@
+---
+# Playbook modular - Solo Validación de Jobs
+- name: Oracle Database Jobs Validation Only
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    connectivity_results: []
+    job_results: []
+    target_database: "{{ target_database | default('') }}"
+
+  tasks:
+    # Primero verificar conectividad
+    - name: "Verificar conectividad {{ item.key }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      ansible.builtin.include_role:
+        name: oracle_connectivity
+      vars:
+        oracle_connectivity_current_database_key: "{{ item.key }}"
+        oracle_connectivity_current_database: "{{ item.value }}"
+      when: target_database == '' or item.key == target_database
+
+    # Validar jobs solo en DBs conectadas
+    - name: "Validar jobs {{ item.instancia_key }}"
+      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_jobs
+      vars:
+        oracle_jobs_current_database_key: "{{ item.instancia_key }}"
+        oracle_jobs_current_database: "{{ oracle_databases[item.instancia_key] }}"
+
+    # GENERAR REPORTE HTML ESPECÍFICO JOBS
+    - name: "Generar reporte HTML de jobs"
+      ansible.builtin.include_role:
+        name: inventory
+      vars:
+        inventory_report_connectivity_results: "{{ connectivity_results }}"
+        inventory_report_backup_results: [] # Vacío - no se validaron backups
+        inventory_report_job_results: "{{ job_results }}"
+        inventory_report_oracle_databases: "{{ oracle_databases }}"
+
+  post_tasks:
+    - name: "Mostrar resultado de jobs"
+      ansible.builtin.debug:
+        msg:
+          - "=== RESULTADO VALIDACIÓN JOBS ==="
+          - "Instancia: {{ item.instancia_key }}"
+          - "Jobs encontrados: {{ item.jobs_data | length }}"
+          - "Jobs broken: {{ item.broken_jobs | length }}"
+          - "Jobs con failures: {{ item.jobs_with_failures | length }}"
+      loop: "{{ job_results }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: job_results | length > 0

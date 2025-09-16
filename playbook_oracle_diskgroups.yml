@@ -1,0 +1,59 @@
+---
+# Playbook modular - Solo Validación de Diskgroups ASM
+- name: Oracle Database Diskgroups Validation Only
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    connectivity_results: []
+    diskgroup_results: []
+    target_database: "{{ target_database | default('') }}"
+
+  tasks:
+    # Primero verificar conectividad
+    - name: "Verificar conectividad {{ item.key }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      ansible.builtin.include_role:
+        name: oracle_connectivity
+      vars:
+        oracle_connectivity_current_database_key: "{{ item.key }}"
+        oracle_connectivity_current_database: "{{ item.value }}"
+      when: target_database == '' or item.key == target_database
+
+    # Validar diskgroups solo en DBs conectadas
+    - name: "Validar diskgroups {{ item.instancia_key }}"
+      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_diskgroups
+      vars:
+        oracle_diskgroups_current_database_key: "{{ item.instancia_key }}"
+        oracle_diskgroups_current_database: "{{ oracle_databases[item.instancia_key] }}"
+
+    # GENERAR REPORTE HTML ESPECÍFICO DISKGROUPS
+    - name: "Generar reporte HTML de diskgroups"
+      ansible.builtin.include_role:
+        name: inventory
+      vars:
+        inventory_report_connectivity_results: "{{ connectivity_results }}"
+        inventory_report_backup_results: [] # Vacío - no se validaron backups
+        inventory_report_job_results: [] # Vacío - no se validaron jobs
+        inventory_report_diskgroup_results: "{{ diskgroup_results }}"
+        inventory_report_oracle_databases: "{{ oracle_databases }}"
+
+  post_tasks:
+    - name: "Mostrar resultado de diskgroups"
+      ansible.builtin.debug:
+        msg:
+          - "=== RESULTADO VALIDACIÓN DISKGROUPS ==="
+          - "Instancia: {{ item.instancia_key }}"
+          - "Diskgroups encontrados: {{ item.diskgroups_data | length }}"
+          - "Diskgroups con alertas: {{ item.diskgroups_alerts | length }}"
+          - "Alertas críticas: {{ item.total_diskgroups_alerts }}"
+      loop: "{{ diskgroup_results }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: diskgroup_results | length > 0

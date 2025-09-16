@@ -1,0 +1,64 @@
+---
+# tasks file for roles/oracle_diskgroups
+- name: "Validar diskgroups ASM en {{ oracle_diskgroups_current_database_key }}"
+  opitzconsulting.ansible_oracle.oracle_sql:
+    hostname: "{{ oracle_diskgroups_current_database.direccion_ip }}"
+    port: "{{ oracle_diskgroups_current_database.puerto }}"
+    service_name: "{{ oracle_diskgroups_current_database.cadena_tns }}"
+    username: "{{ oracle_diskgroups_current_database.usuario }}"
+    password: "{{ oracle_diskgroups_current_database.password }}"
+    sql: |
+      SELECT
+        HOST_NAME,
+        NAME,
+        STATE,
+        TYPE,
+        TOTAL_MB,
+        FREE_MB,
+        TOTAL_MB-FREE_MB as OCUPADO_MB,
+        ((TOTAL_MB-FREE_MB)/TOTAL_MB*100) as PORC_OCUPADO
+      FROM V$ASM_DISKGROUP, v$instance
+      WHERE ((TOTAL_MB-FREE_MB)/TOTAL_MB*100) > 80
+      AND FREE_MB < 100000
+      ORDER BY NAME, FREE_MB/TOTAL_MB*100 DESC
+    mode: normal
+  register: diskgroups_validation_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar resultados de diskgroups {{ oracle_diskgroups_current_database_key }}"
+  ansible.builtin.set_fact:
+    diskgroup_results: "{{ diskgroup_results + [diskgroup_item] }}"
+  vars:
+    validation_successful: "{{ not (diskgroups_validation_result.failed | default(true)) }}"
+    diskgroups_data: "{{ diskgroups_validation_result.query_result | default([]) if validation_successful else [] }}"
+
+    diskgroup_item:
+      instancia_key: "{{ oracle_diskgroups_current_database_key }}"
+      instancia: "{{ oracle_diskgroups_current_database.instancia }}"
+      host: "{{ oracle_diskgroups_current_database.host }}"
+      direccion_ip: "{{ oracle_diskgroups_current_database.direccion_ip }}"
+
+      diskgroups_validation_successful: "{{ validation_successful }}"
+      diskgroups_validation_error: "{{ diskgroups_validation_result.msg | default('') if diskgroups_validation_result.failed | default(false) else '' }}"
+
+      # Datos de diskgroups (solo alertas - query ya filtrada)
+      diskgroups_data: "{{ diskgroups_data }}"
+
+      # Todas las filas retornadas son alertas críticas
+      diskgroups_alerts: "{{ diskgroups_data }}"
+
+      # Contadores
+      total_diskgroups_alerts: "{{ diskgroups_data | length }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Mostrar resumen de diskgroups {{ oracle_diskgroups_current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "Instancia: {{ oracle_diskgroups_current_database_key }}"
+      - "Validación: {{ 'EXITOSA' if not (diskgroups_validation_result.failed | default(true)) else 'ERROR' }}"
+      - "Diskgroups con alertas: {{ diskgroups_validation_result.query_result
+        | default([]) | length if not (diskgroups_validation_result.failed | default(true)) else 0 }}"
+      - "Alertas críticas: {{ diskgroups_validation_result.query_result
+        | default([]) | length if not (diskgroups_validation_result.failed | default(true)) else 0 }}"
