@@ -16,7 +16,7 @@
       loop_control:
         label: "{{ item.key }}"
       ansible.builtin.include_role:
-        name: oracle_connectivity
+        name: oracle_conn
       vars:
         oracle_connectivity_current_database_key: "{{ item.key }}"
         oracle_connectivity_current_database: "{{ item.value }}"
