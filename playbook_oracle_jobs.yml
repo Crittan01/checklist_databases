@@ -1,6 +1,6 @@
 ---
 # Playbook modular - Solo Validación de Jobs
-- name: Oracle Database Jobs Validation Only
+- name: Oracle Database Jobs Only
   hosts: localhost
   connection: local
   gather_facts: true
@@ -10,49 +10,37 @@
     target_database: "{{ target_database | default('') }}"
 
   tasks:
-    # Primero verificar conectividad
-    - name: "Verificar conectividad {{ item.key }}"
-      loop: "{{ oracle_databases | dict2items }}"
-      loop_control:
-        label: "{{ item.key }}"
+    # Conectividad primero
+    - name: "Conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_connectivity
       vars:
-        oracle_connectivity_current_database_key: "{{ item.key }}"
-        oracle_connectivity_current_database: "{{ item.value }}"
+        current_db_key: "{{ item.key }}"
+        current_db: "{{ item.value }}"
+      loop: "{{ oracle_databases | dict2items }}"
       when: target_database == '' or item.key == target_database
 
-    # Validar jobs solo en DBs conectadas
-    - name: "Validar jobs {{ item.instancia_key }}"
-      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
-      loop_control:
-        label: "{{ item.instancia_key }}"
+    # Solo jobs en conectadas
+    - name: "Jobs {{ item.instancia }}"
       ansible.builtin.include_role:
         name: oracle_jobs
       vars:
-        oracle_jobs_current_database_key: "{{ item.instancia_key }}"
-        oracle_jobs_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        current_db_key: "{{ item.instancia }}"
+        current_db: "{{ oracle_databases[item.instancia] }}"
+      loop: "{{ connectivity_results | selectattr('conectado', 'equalto', true) | list }}"
 
-    # GENERAR REPORTE HTML ESPECÍFICO JOBS
-    - name: "Generar reporte HTML de jobs"
+    # Reporte específico
+    - name: "Generar reporte jobs"
       ansible.builtin.include_role:
         name: inventory
       vars:
-        inventory_report_connectivity_results: "{{ connectivity_results }}"
-        inventory_report_backup_results: [] # Vacío - no se validaron backups
-        inventory_report_job_results: "{{ job_results }}"
-        inventory_report_oracle_databases: "{{ oracle_databases }}"
+        backup_results: []
+        diskgroup_results: []
 
   post_tasks:
-    - name: "Mostrar resultado de jobs"
+    - name: "Resumen jobs"
       ansible.builtin.debug:
         msg:
-          - "=== RESULTADO VALIDACIÓN JOBS ==="
-          - "Instancia: {{ item.instancia_key }}"
-          - "Jobs encontrados: {{ item.jobs_data | length }}"
-          - "Jobs broken: {{ item.broken_jobs | length }}"
-          - "Jobs con failures: {{ item.jobs_with_failures | length }}"
-      loop: "{{ job_results }}"
-      loop_control:
-        label: "{{ item.instancia_key }}"
-      when: job_results | length > 0
+          - "Instancias validadas: {{ job_results | length }}"
+          - "Jobs broken: {{ job_results | map(attribute='data') | flatten | selectattr('3', 'equalto', 'Y') | list | length }}"
+          - "Jobs con failures: {{ job_results | map(attribute='data') | flatten | selectattr('2', 'greaterthan', 0) | list | length }}"

@@ -1,44 +1,27 @@
 ---
 # tasks file for roles/oracle_connectivity
-- name: "Probar conexión básica a {{ oracle_connectivity_current_database_key }}"
+- name: "Probar conexión {{ current_db_key }}"
   opitzconsulting.ansible_oracle.oracle_sql:
-    hostname: "{{ oracle_connectivity_current_database.direccion_ip }}"
-    port: "{{ oracle_connectivity_current_database.puerto }}"
-    service_name: "{{ oracle_connectivity_current_database.cadena_tns }}"
-    username: "{{ oracle_connectivity_current_database.usuario }}"
-    password: "{{ oracle_connectivity_current_database.password }}"
+    hostname: "{{ current_db.direccion_ip }}"
+    port: "{{ current_db.puerto }}"
+    service_name: "{{ current_db.cadena_tns }}"
+    username: "{{ current_db.usuario }}"
+    password: "{{ current_db.password }}"
     sql: "SELECT 1 FROM dual"
     mode: normal
-  register: connection_result
+  register: conn_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Procesar resultado de conectividad {{ oracle_connectivity_current_database_key }}"
+- name: "Registrar resultado {{ current_db_key }}"
   ansible.builtin.set_fact:
-    connectivity_results: "{{ connectivity_results + [connectivity_item] }}"
+    connectivity_results: "{{ connectivity_results + [result_item] }}"
   vars:
-    is_successful: "{{ not (connection_result.failed | default(true)) }}"
-    connectivity_item:
-      instancia_key: "{{ oracle_connectivity_current_database_key }}"
-      instancia: "{{ oracle_connectivity_current_database.instancia }}"
-      host: "{{ oracle_connectivity_current_database.host }}"
-      direccion_ip: "{{ oracle_connectivity_current_database.direccion_ip }}"
-      puerto: "{{ oracle_connectivity_current_database.puerto }}"
-      cadena_tns: "{{ oracle_connectivity_current_database.cadena_tns }}"
-      usuario: "{{ oracle_connectivity_current_database.usuario }}"
-      motor_bd: "{{ oracle_connectivity_current_database.motor_bd }}"
-      sistema_operativo: "{{ oracle_connectivity_current_database.sistema_operativo }}"
-      release_so: "{{ oracle_connectivity_current_database.release_so }}"
-      release_bd: "{{ oracle_connectivity_current_database.release_bd }}"
-
-      connection_successful: "{{ is_successful }}"
-      connection_error: "{{ connection_result.msg | default('') if connection_result.failed | default(false) else '' }}"
-      database_info: "{{ {'status': 'connected'} if is_successful else {} }}"
-      test_timestamp: "{{ ansible_date_time.iso8601 }}"
-
-- name: "Mostrar estado de conexión {{ oracle_connectivity_current_database_key }}"
-  ansible.builtin.debug:
-    msg:
-      - "Instancia: {{ oracle_connectivity_current_database_key }}"
-      - "Estado: {{ 'CONECTADA' if not (connection_result.failed | default(true)) else 'ERROR' }}"
-      - "{{ 'Conexión exitosa' if not (connection_result.failed | default(true)) else 'Error: ' + (connection_result.msg | default('Error desconocido')) }}"
+    result_item:
+      instancia: "{{ current_db_key }}"
+      host: "{{ current_db.direccion_ip }}"
+      puerto: "{{ current_db.puerto }}"
+      usuario: "{{ current_db.usuario }}"
+      conectado: "{{ not (conn_result.failed | default(true)) }}"
+      error: "{{ conn_result.msg | default('') if conn_result.failed | default(false) else '' }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"

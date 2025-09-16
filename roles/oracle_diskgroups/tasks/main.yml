@@ -1,12 +1,12 @@
 ---
 # tasks file for roles/oracle_diskgroups
-- name: "Validar diskgroups ASM en {{ oracle_diskgroups_current_database_key }}"
+- name: "Validar diskgroups {{ current_db_key }}"
   opitzconsulting.ansible_oracle.oracle_sql:
-    hostname: "{{ oracle_diskgroups_current_database.direccion_ip }}"
-    port: "{{ oracle_diskgroups_current_database.puerto }}"
-    service_name: "{{ oracle_diskgroups_current_database.cadena_tns }}"
-    username: "{{ oracle_diskgroups_current_database.usuario }}"
-    password: "{{ oracle_diskgroups_current_database.password }}"
+    hostname: "{{ current_db.direccion_ip }}"
+    port: "{{ current_db.puerto }}"
+    service_name: "{{ current_db.cadena_tns }}"
+    username: "{{ current_db.usuario }}"
+    password: "{{ current_db.password }}"
     sql: |
       SELECT
         HOST_NAME,
@@ -22,43 +22,17 @@
       AND FREE_MB < 100000
       ORDER BY NAME, FREE_MB/TOTAL_MB*100 DESC
     mode: normal
-  register: diskgroups_validation_result
+  register: diskgroup_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Procesar resultados de diskgroups {{ oracle_diskgroups_current_database_key }}"
+- name: "Registrar resultado {{ current_db_key }}"
   ansible.builtin.set_fact:
-    diskgroup_results: "{{ diskgroup_results + [diskgroup_item] }}"
+    diskgroup_results: "{{ diskgroup_results + [result_item] }}"
   vars:
-    validation_successful: "{{ not (diskgroups_validation_result.failed | default(true)) }}"
-    diskgroups_data: "{{ diskgroups_validation_result.query_result | default([]) if validation_successful else [] }}"
-
-    diskgroup_item:
-      instancia_key: "{{ oracle_diskgroups_current_database_key }}"
-      instancia: "{{ oracle_diskgroups_current_database.instancia }}"
-      host: "{{ oracle_diskgroups_current_database.host }}"
-      direccion_ip: "{{ oracle_diskgroups_current_database.direccion_ip }}"
-
-      diskgroups_validation_successful: "{{ validation_successful }}"
-      diskgroups_validation_error: "{{ diskgroups_validation_result.msg | default('') if diskgroups_validation_result.failed | default(false) else '' }}"
-
-      # Datos de diskgroups (solo alertas - query ya filtrada)
-      diskgroups_data: "{{ diskgroups_data }}"
-
-      # Todas las filas retornadas son alertas críticas
-      diskgroups_alerts: "{{ diskgroups_data }}"
-
-      # Contadores
-      total_diskgroups_alerts: "{{ diskgroups_data | length }}"
-
-      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
-
-- name: "Mostrar resumen de diskgroups {{ oracle_diskgroups_current_database_key }}"
-  ansible.builtin.debug:
-    msg:
-      - "Instancia: {{ oracle_diskgroups_current_database_key }}"
-      - "Validación: {{ 'EXITOSA' if not (diskgroups_validation_result.failed | default(true)) else 'ERROR' }}"
-      - "Diskgroups con alertas: {{ diskgroups_validation_result.query_result
-        | default([]) | length if not (diskgroups_validation_result.failed | default(true)) else 0 }}"
-      - "Alertas críticas: {{ diskgroups_validation_result.query_result
-        | default([]) | length if not (diskgroups_validation_result.failed | default(true)) else 0 }}"
+    result_item:
+      instancia: "{{ current_db_key }}"
+      exitoso: "{{ not (diskgroup_result.failed | default(true)) }}"
+      error: "{{ diskgroup_result.msg | default('') if diskgroup_result.failed | default(false) else '' }}"
+      data: "{{ diskgroup_result.query_result | default([]) if not (diskgroup_result.failed | default(true)) else [] }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"

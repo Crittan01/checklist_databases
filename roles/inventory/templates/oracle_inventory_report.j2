@@ -282,85 +282,23 @@
                     <div class="metric-label">Conectividad</div>
                 </div>
                 <table style="margin: 10px 0; box-shadow: none;">
-                    <tr>
-                        <td><strong>Total Bases:</strong></td>
-                        <td>{{ stats.total_dbs }}</td>
-                    </tr>
-                    <tr style="background: rgba(39, 174, 96, 0.1);">
-                        <td><strong>Conectadas:</strong></td>
-                        <td>{{ stats.successful_conns }}</td>
-                    </tr>
-                    <tr style="background: rgba(231, 76, 60, 0.1);">
-                        <td><strong>Fallidas:</strong></td>
-                        <td>{{ stats.failed_conns }}</td>
-                    </tr>
+                    <tr><td><strong>Total Bases:</strong></td><td>{{ stats.total_dbs }}</td></tr>
+                    <tr style="background: rgba(39, 174, 96, 0.1);"><td><strong>Conectadas:</strong></td><td>{{ stats.successful_conns }}</td></tr>
+                    <tr style="background: rgba(231, 76, 60, 0.1);"><td><strong>Fallidas:</strong></td><td>{{ stats.failed_conns }}</td></tr>
                 </table>
             </div>
             
             <div class="summary-card">
                 <h2 class="summary-title">Estado de Alertas por Dominio</h2>
                 <div class="metric">
-                    <div class="metric-value" style="color: {{ 'var(--success-color)' if stats.total_alerts | int == 0 else 'var(--danger-color)' }};">
-                        {{ stats.total_alerts }}
-                    </div>
+                    <div class="metric-value" style="color: {{ 'var(--success-color)' if stats.total_alerts | int == 0 else 'var(--danger-color)' }};">{{ stats.total_alerts }}</div>
                     <div class="metric-label">Total Alertas</div>
                 </div>
                 <table style="margin: 10px 0; box-shadow: none;">
-                    <thead>
-                        <tr style="background: var(--light-color); font-weight: 600;">
-                            <td><strong>Dominio</strong></td>
-                            <td><strong>Alertas</strong></td>
-                            <td><strong>Estado</strong></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Conectividad</strong></td>
-                            <td>{{ stats.failed_conns }} bases sin acceso</td>
-                            <td>
-                                {% if stats.failed_conns | int > 0 %}
-                                    <span class="status-danger">CRÍTICO</span>
-                                {% else %}
-                                    <span class="status-success">OK</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Backups</strong></td>
-                            <td>{{ stats.total_backup_alerts }} alertas</td>
-                            <td>
-                                {% if stats.backup_errors_count | int > 0 %}
-                                    <span class="status-danger">CRÍTICO</span>
-                                {% elif stats.instances_no_archivelog_count | int > 0 %}
-                                    <span class="status-warning">VERIFICAR</span>
-                                {% else %}
-                                    <span class="status-success">OK</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Jobs</strong></td>
-                            <td>{{ stats.broken_jobs_count }} jobs broken</td>
-                            <td>
-                                {% if stats.broken_jobs_count | int > 0 %}
-                                    <span class="status-danger">CRÍTICO</span>
-                                {% else %}
-                                    <span class="status-success">OK</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Diskgroups</strong></td>
-                            <td>{{ stats.diskgroup_alerts_count | default(0) }} críticos</td>
-                            <td>
-                                {% if stats.diskgroup_alerts_count | default(0) | int > 0 %}
-                                    <span class="status-danger">CRÍTICO</span>
-                                {% else %}
-                                    <span class="status-success">OK</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tr><td><strong>Conectividad</strong></td><td>{{ stats.failed_conns }} errores</td><td>{% if stats.failed_conns | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td></tr>
+                    <tr><td><strong>Backups</strong></td><td>{{ stats.total_backup_alerts }} alertas</td><td>{% if stats.backup_errors_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% elif stats.instances_no_archivelog_count | int > 0 %}<span class="status-warning">VERIFICAR</span>{% else %}<span class="status-success">OK</span>{% endif %}</td></tr>
+                    <tr><td><strong>Jobs</strong></td><td>{{ stats.broken_jobs_count }} broken</td><td>{% if stats.broken_jobs_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td></tr>
+                    <tr><td><strong>Diskgroups</strong></td><td>{{ stats.diskgroup_alerts_count }} críticos</td><td>{% if stats.diskgroup_alerts_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td></tr>
                 </table>
             </div>
         </div>
@@ -379,40 +317,21 @@
             
             <table>
                 <thead>
-                    <tr>
-                        <th>Instancia</th>
-                        <th>Host</th>
-                        <th>IP:Puerto</th>
-                        <th>TNS</th>
-                        <th>Usuario</th>
-                        <th>Estado</th>
-                        <th>Timestamp</th>
-                    </tr>
+                    <tr><th>Instancia</th><th>Host</th><th>IP:Puerto</th><th>Usuario</th><th>Estado</th><th>Timestamp</th></tr>
                 </thead>
                 <tbody>
-                    {% for conn in connectivity_results %}
-                    <tr class="{{ 'critical-alert' if not conn.connection_successful else '' }}">
+                    {% for conn in connectivity_data %}
+                    <tr class="{{ 'critical-alert' if not conn.conectado else '' }}">
                         <td><strong>{{ conn.instancia }}</strong></td>
                         <td>{{ conn.host }}</td>
-                        <td>{{ conn.direccion_ip }}:{{ conn.puerto }}</td>
-                        <td>{{ conn.cadena_tns }}</td>
+                        <td>{{ conn.host }}:{{ oracle_databases[conn.instancia].puerto if conn.instancia in oracle_databases else 'N/A' }}</td>
                         <td>{{ conn.usuario }}</td>
-                        <td>
-                            {% if conn.connection_successful %}
-                                <span class="status-success">CONECTADA</span>
-                            {% else %}
-                                <span class="status-danger">ERROR</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ conn.test_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                        <td>{% if conn.conectado %}<span class="status-success">CONECTADA</span>{% else %}<span class="status-danger">ERROR</span>{% endif %}</td>
+                        <td>{{ conn.timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not conn.connection_successful and conn.connection_error %}
+                    {% if not conn.conectado and conn.error %}
                     <tr class="critical-alert">
-                        <td colspan="7">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ conn.connection_error }}
-                            </div>
-                        </td>
+                        <td colspan="6"><div class="error-details"><strong>Error:</strong> {{ conn.error }}</div></td>
                     </tr>
                     {% endif %}
                     {% endfor %}
@@ -420,393 +339,203 @@
             </table>
         </div>
         
-        <!-- Frente 2: Información Operacional COMPLETA -->
+        <!-- Frente 2: Información Operacional -->
         <div id="frente2" class="tab-content">
             <h2>Información Operacional Completa</h2>
-            <p><strong>Vista total de todos los datos operacionales sin filtros</strong> - Información completa para análisis y trazabilidad.</p>
             
-            <!-- TABLA CONSOLIDADA DE BACKUPS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Información Completa de Backups (Últimas 12 horas)</h3>
-            <div class="summary-stats">
-                <p><strong>Resumen Global:</strong> 
-                {% set global_backups = backup_results | map(attribute='total_backups') | map('int') | sum %}
-                {% set global_failed = backup_results | map(attribute='failed_backups') | map('int') | sum %}
-                {% set global_archivelog = backup_results | map(attribute='archivelog_count') | map('int') | sum %}
-                Total backups: {{ global_backups }} | 
-                Fallidos: {{ global_failed }} | 
-                ARCHIVELOG: {{ global_archivelog }} | 
-                Instancias sin ARCHIVELOG: {{ stats.instances_no_archivelog_count | default(0) }}
-                </p>
-            </div>
-            
-            {% if backup_results | length > 0 %}
+            <!-- Backups -->
+            <h3 style="color: var(--primary-color); margin-top: 30px;">Backups (Últimas 12 horas)</h3>
+            {% if backup_data | length > 0 %}
             <table class="operational-table">
                 <thead>
-                    <tr>
-                        <th>Instancia</th>
-                        <th>Estado Validación</th>
-                        <th>Total Backups</th>
-                        <th>Exitosos</th>
-                        <th>Fallidos</th>
-                        <th>ARCHIVELOG</th>
-                        <th>Estado ARCHIVELOG</th>
-                        <th>Timestamp</th>
-                    </tr>
+                    <tr><th>Instancia</th><th>Estado</th><th>Total</th><th>Exitosos</th><th>Fallidos</th><th>ARCHIVELOG</th><th>Estado ARCHIVELOG</th><th>Timestamp</th></tr>
                 </thead>
                 <tbody>
-                    {% for backup in backup_results %}
-                    <tr class="{{ 'warning-alert' if backup.no_archivelog_in_12h else '' }}">
-                        <td><strong>{{ backup.instancia }}</strong></td>
-                        <td>
-                            {% if backup.backup_validation_successful %}
-                                <span class="status-success">EXITOSA</span>
-                            {% else %}
-                                <span class="status-danger">ERROR</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ backup.total_backups }}</td>
-                        <td>{{ backup.successful_backups }}</td>
-                        <td>{{ backup.failed_backups }}</td>
-                        <td>{{ backup.archivelog_count }}</td>
-                        <td>
-                            {% if backup.no_archivelog_in_12h %}
-                                <span class="status-warning">SIN ARCHIVELOG 12H</span>
-                            {% else %}
-                                <span class="status-success">PRESENTE</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ backup.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                    {% for bkp in backup_data %}
+                    {% set arch_count = bkp.data | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length %}
+                    {% set fail_count = bkp.data | selectattr('5', 'equalto', 'FAILED') | list | length %}
+                    <tr class="{{ 'warning-alert' if arch_count == 0 and bkp.exitoso else '' }}">
+                        <td><strong>{{ bkp.instancia }}</strong></td>
+                        <td>{% if bkp.exitoso %}<span class="status-success">EXITOSA</span>{% else %}<span class="status-danger">ERROR</span>{% endif %}</td>
+                        <td>{{ bkp.data | length }}</td>
+                        <td>{{ bkp.data | length - fail_count }}</td>
+                        <td>{{ fail_count }}</td>
+                        <td>{{ arch_count }}</td>
+                        <td>{% if arch_count == 0 and bkp.exitoso %}<span class="status-warning">SIN ARCHIVELOG 12H</span>{% else %}<span class="status-success">PRESENTE</span>{% endif %}</td>
+                        <td>{{ bkp.timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not backup.backup_validation_successful %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ backup.backup_validation_error }}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="info-box">
-                <p>No hay datos de validación de backups disponibles.</p>
-            </div>
+            <div class="info-box"><p>No hay datos de validación de backups disponibles.</p></div>
             {% endif %}
             
-            <!-- TABLA CONSOLIDADA DE JOBS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado Completo de Jobs Oracle</h3>
-            <div class="summary-stats">
-                <p><strong>Resumen Global:</strong> 
-                {% set global_jobs = job_results | map(attribute='total_jobs') | map('int') | sum %}
-                {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
-                {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
-                Total jobs: {{ global_jobs }} | 
-                Broken: {{ global_broken }} | 
-                Con failures: {{ global_failures }}
-                </p>
-            </div>
-            
-            {% if job_results | length > 0 %}
+            <!-- Jobs -->
+            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado de Jobs Oracle</h3>
+            {% if job_data | length > 0 %}
             <table class="operational-table">
                 <thead>
-                    <tr>
-                        <th>Instancia</th>
-                        <th>Estado Validación</th>
-                        <th>Total Jobs</th>
-                        <th>Activos</th>
-                        <th>Broken</th>
-                        <th>Con Failures</th>
-                        <th>Estado General</th>
-                        <th>Timestamp</th>
-                    </tr>
+                    <tr><th>Instancia</th><th>Estado</th><th>Total</th><th>Activos</th><th>Broken</th><th>Con Failures</th><th>Estado General</th><th>Timestamp</th></tr>
                 </thead>
                 <tbody>
-                    {% for job in job_results %}
-                    <tr class="{{ 'critical-alert' if job.broken_jobs_count | int > 0 else ('warning-alert' if job.jobs_with_failures_count | int > 0 else '') }}">
+                    {% for job in job_data %}
+                    {% set broken_count = job.data | selectattr('3', 'equalto', 'Y') | list | length %}
+                    {% set failures_count = 0 %}
+                    {% for jb in job.data %}{% if jb[2] | int > 0 %}{% set failures_count = failures_count + 1 %}{% endif %}{% endfor %}
+                    <tr class="{{ 'critical-alert' if broken_count > 0 else ('warning-alert' if failures_count > 0 else '') }}">
                         <td><strong>{{ job.instancia }}</strong></td>
-                        <td>
-                            {% if job.jobs_validation_successful %}
-                                <span class="status-success">EXITOSA</span>
-                            {% else %}
-                                <span class="status-danger">ERROR</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.total_jobs }}</td>
-                        <td>{{ job.active_jobs }}</td>
-                        <td>{{ job.broken_jobs_count }}</td>
-                        <td>{{ job.jobs_with_failures_count }}</td>
-                        <td>
-                            {% if job.broken_jobs_count | int > 0 %}
-                                <span class="status-danger">CRÍTICO</span>
-                            {% elif job.jobs_with_failures_count | int > 0 %}
-                                <span class="status-warning">ADVERTENCIA</span>
-                            {% else %}
-                                <span class="status-success">OPERACIONAL</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                        <td>{% if job.exitoso %}<span class="status-success">EXITOSA</span>{% else %}<span class="status-danger">ERROR</span>{% endif %}</td>
+                        <td>{{ job.data | length }}</td>
+                        <td>{{ job.data | selectattr('3', 'equalto', 'N') | list | length }}</td>
+                        <td>{{ broken_count }}</td>
+                        <td>{{ failures_count }}</td>
+                        <td>{% if broken_count > 0 %}<span class="status-danger">CRÍTICO</span>{% elif failures_count > 0 %}<span class="status-warning">ADVERTENCIA</span>{% else %}<span class="status-success">OPERACIONAL</span>{% endif %}</td>
+                        <td>{{ job.timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not job.jobs_validation_successful %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ job.jobs_validation_error }}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="info-box">
-                <p>No hay datos de validación de jobs disponibles.</p>
-            </div>
+            <div class="info-box"><p>No hay datos de validación de jobs disponibles.</p></div>
             {% endif %}
             
-            <!-- TABLA CONSOLIDADA DE DISKGROUPS -->
+            <!-- Diskgroups -->
             <h3 style="color: var(--primary-color); margin-top: 30px;">Estado de Diskgroups ASM</h3>
-            <div class="summary-stats">
-                <p><strong>Resumen Global:</strong> 
-                {% set global_diskgroup_alerts = diskgroup_results | default([]) | map(attribute='total_diskgroups_alerts') | map('int') | sum %}
-                Diskgroups con alertas: {{ global_diskgroup_alerts }} | 
-                Instancias validadas: {{ diskgroup_results | default([]) | length }}
-                </p>
-            </div>
-            
-            {% if diskgroup_results | default([]) | length > 0 %}
+            {% if diskgroup_data | length > 0 %}
             <table class="operational-table">
                 <thead>
-                    <tr>
-                        <th>Instancia</th>
-                        <th>Estado Validación</th>
-                        <th>Diskgroups Alertas</th>
-                        <th>Estado General</th>
-                        <th>Timestamp</th>
-                    </tr>
+                    <tr><th>Instancia</th><th>Estado</th><th>Alertas</th><th>Estado General</th><th>Timestamp</th></tr>
                 </thead>
                 <tbody>
-                    {% for diskgroup in diskgroup_results %}
-                    <tr class="{{ 'critical-alert' if diskgroup.total_diskgroups_alerts | int > 0 else '' }}">
-                        <td><strong>{{ diskgroup.instancia }}</strong></td>
-                        <td>
-                            {% if diskgroup.diskgroups_validation_successful %}
-                                <span class="status-success">EXITOSA</span>
-                            {% else %}
-                                <span class="status-danger">ERROR</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ diskgroup.total_diskgroups_alerts }}</td>
-                        <td>
-                            {% if diskgroup.total_diskgroups_alerts | int > 0 %}
-                                <span class="status-danger">CRÍTICO</span>
-                            {% else %}
-                                <span class="status-success">OPERACIONAL</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ diskgroup.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                    {% for dg in diskgroup_data %}
+                    <tr class="{{ 'critical-alert' if dg.data | length > 0 else '' }}">
+                        <td><strong>{{ dg.instancia }}</strong></td>
+                        <td>{% if dg.exitoso %}<span class="status-success">EXITOSA</span>{% else %}<span class="status-danger">ERROR</span>{% endif %}</td>
+                        <td>{{ dg.data | length }}</td>
+                        <td>{% if dg.data | length > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OPERACIONAL</span>{% endif %}</td>
+                        <td>{{ dg.timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not diskgroup.diskgroups_validation_successful %}
-                    <tr>
-                        <td colspan="5">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ diskgroup.diskgroups_validation_error }}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <div class="info-box">
-                <p>No hay datos de validación de diskgroups disponibles.</p>
-            </div>
+            <div class="info-box"><p>No hay datos de validación de diskgroups disponibles.</p></div>
             {% endif %}
         </div>
         
-        <!-- Frente 3: SOLO Alertas Críticas -->
+        <!-- Frente 3: Alertas Críticas -->
         <div id="frente3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
-            <p><strong>Solo elementos que ameritan validación administrativa</strong> - Acciones requeridas para mantener operatividad.</p>
             
             {% if stats.total_alerts | int == 0 %}
             <div class="no-alerts">
                 <h3>Sistema Operacional</h3>
                 <p>No se detectaron alertas críticas que requieran atención administrativa.</p>
-                <p><strong>Todas las validaciones están en estado satisfactorio.</strong></p>
             </div>
             {% else %}
 
-            <!-- ALERTAS CRÍTICAS DE CONECTIVIDAD -->
+            <!-- Conectividad -->
             {% if stats.failed_conns | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">CRÍTICO: Bases de Datos Sin Conexión ({{ stats.failed_conns }})</h3>
-                <p><strong>Acción requerida:</strong> Verificar servicios, listener y conectividad de red inmediatamente.</p>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Bases Sin Conexión ({{ stats.failed_conns }})</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Host</th>
-                            <th>IP:Puerto</th>
-                            <th>Error</th>
-                            <th>Acción Sugerida</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Instancia</th><th>Host</th><th>Error</th><th>Acción</th></tr></thead>
                     <tbody>
-                        {% for conn in connectivity_results %}
-                        {% if not conn.connection_successful %}
+                        {% for conn in connectivity_data %}{% if not conn.conectado %}
                         <tr class="critical-alert">
                             <td><strong>{{ conn.instancia }}</strong></td>
                             <td>{{ conn.host }}</td>
-                            <td>{{ conn.direccion_ip }}:{{ conn.puerto }}</td>
-                            <td>{{ conn.connection_error | truncate(50) }}</td>
-                            <td>Verificar listener y servicios Oracle</td>
+                            <td>{{ conn.error | truncate(50) }}</td>
+                            <td>Verificar listener y servicios</td>
                         </tr>
-                        {% endif %}
-                        {% endfor %}
+                        {% endif %}{% endfor %}
                     </tbody>
                 </table>
             </div>
             {% endif %}
 
-            <!-- ALERTAS CRÍTICAS DE BACKUPS FALLIDOS -->
-            {% if stats.backup_errors_count | default(0) | int > 0 %}
+            <!-- Backups fallidos -->
+            {% if stats.backup_errors_count | int > 0 %}
             <div class="alert-section">
                 <h3 style="color: var(--danger-color);">CRÍTICO: Backups Fallidos ({{ stats.backup_errors_count }})</h3>
-                <p><strong>Acción requerida:</strong> Investigar y corregir fallos de backup inmediatamente.</p>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Inicio</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
-                            <th>Acción Sugerida</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Instancia</th><th>Inicio</th><th>Tipo</th><th>Estado</th><th>Acción</th></tr></thead>
                     <tbody>
-                        {% for backup in backup_results %}
-                            {% for error in backup.backup_errors %}
-                            <tr class="critical-alert">
-                                <td><strong>{{ backup.instancia }}</strong></td>
-                                <td>{{ error[2] | default('N/A') }}</td>
-                                <td>{{ error[4] | default('N/A') }}</td>
-                                <td><span class="status-danger">{{ error[5] | default('FAILED') }}</span></td>
-                                <td>Revisar logs RMAN y espacio en disco</td>
-                            </tr>
-                            {% endfor %}
-                        {% endfor %}
+                        {% for bkp in backup_data %}{% for item in bkp.data %}{% if item[5] == 'FAILED' %}
+                        <tr class="critical-alert">
+                            <td><strong>{{ bkp.instancia }}</strong></td>
+                            <td>{{ item[2] }}</td>
+                            <td>{{ item[4] }}</td>
+                            <td><span class="status-danger">{{ item[5] }}</span></td>
+                            <td>Revisar logs RMAN</td>
+                        </tr>
+                        {% endif %}{% endfor %}{% endfor %}
                     </tbody>
                 </table>
             </div>
             {% endif %}
 
-            <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
-            {% if stats.instances_no_archivelog_count | default(0) | int > 0 %}
+            <!-- Sin ARCHIVELOG -->
+            {% if stats.instances_no_archivelog_count | int > 0 %}
             <div class="warning-section">
-                <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG en 12h ({{ stats.instances_no_archivelog_count }})</h3>
-                <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
+                <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG 12h ({{ stats.instances_no_archivelog_count }})</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Total Backups</th>
-                            <th>ARCHIVELOG</th>
-                            <th>Recomendación</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Instancia</th><th>Total Backups</th><th>ARCHIVELOG</th><th>Recomendación</th></tr></thead>
                     <tbody>
-                        {% for backup in backup_results %}
-                        {% if backup.no_archivelog_in_12h %}
+                        {% for bkp in backup_data %}{% set arch_count = bkp.data | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length %}{% if bkp.exitoso and arch_count == 0 %}
                         <tr class="warning-alert">
-                            <td><strong>{{ backup.instancia }}</strong></td>
-                            <td>{{ backup.total_backups }}</td>
-                            <td>{{ backup.archivelog_count }}</td>
-                            <td>Configurar backup automático de ARCHIVELOG</td>
+                            <td><strong>{{ bkp.instancia }}</strong></td>
+                            <td>{{ bkp.data | length }}</td>
+                            <td>{{ arch_count }}</td>
+                            <td>Configurar backup ARCHIVELOG</td>
                         </tr>
-                        {% endif %}
-                        {% endfor %}
+                        {% endif %}{% endfor %}
                     </tbody>
                 </table>
             </div>
             {% endif %}
 
-            <!-- ALERTAS CRÍTICAS DE JOBS -->
-            {% if stats.broken_jobs_count | default(0) | int > 0 %}
+            <!-- Jobs broken -->
+            {% if stats.broken_jobs_count | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">CRÍTICO: Jobs en Estado BROKEN ({{ stats.broken_jobs_count }})</h3>
-                <p><strong>Acción requerida:</strong> Reparar o deshabilitar jobs broken inmediatamente.</p>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Jobs BROKEN ({{ stats.broken_jobs_count }})</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Job ID</th>
-                            <th>Schema</th>
-                            <th>Failures</th>
-                            <th>Acción Sugerida</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Instancia</th><th>Job ID</th><th>Schema</th><th>Failures</th><th>Acción</th></tr></thead>
                     <tbody>
-                        {% for job in job_results %}
-                            {% for broken in job.broken_jobs %}
-                            <tr class="critical-alert">
-                                <td><strong>{{ job.instancia }}</strong></td>
-                                <td>{{ broken[0] | default('N/A') }}</td>
-                                <td>{{ broken[1] | default('N/A') }}</td>
-                                <td>{{ broken[2] | default('0') }}</td>
-                                <td>Revisar job y corregir o deshabilitar</td>
-                            </tr>
-                            {% endfor %}
-                        {% endfor %}
+                        {% for job in job_data %}{% for jb in job.data %}{% if jb[3] == 'Y' %}
+                        <tr class="critical-alert">
+                            <td><strong>{{ job.instancia }}</strong></td>
+                            <td>{{ jb[0] }}</td>
+                            <td>{{ jb[1] }}</td>
+                            <td>{{ jb[2] }}</td>
+                            <td>Reparar o deshabilitar</td>
+                        </tr>
+                        {% endif %}{% endfor %}{% endfor %}
                     </tbody>
                 </table>
             </div>
             {% endif %}
 
-            <!-- ALERTAS CRÍTICAS DE DISKGROUPS -->
-            {% if stats.diskgroup_alerts_count | default(0) | int > 0 %}
+            <!-- Diskgroups críticos -->
+            {% if stats.diskgroup_alerts_count | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">CRÍTICO: Diskgroups ASM Saturados ({{ stats.diskgroup_alerts_count }})</h3>
-                <p><strong>Acción requerida:</strong> Revisar espacio disponible y considerar ampliación inmediata.</p>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Diskgroups Saturados ({{ stats.diskgroup_alerts_count }})</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Host</th>
-                            <th>Diskgroup</th>
-                            <th>Estado</th>
-                            <th>Tipo</th>
-                            <th>Total MB</th>
-                            <th>Libre MB</th>
-                            <th>% Ocupado</th>
-                            <th>Acción Sugerida</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Instancia</th><th>Host</th><th>Diskgroup</th><th>Estado</th><th>Total MB</th><th>Libre MB</th><th>% Ocupado</th><th>Acción</th></tr></thead>
                     <tbody>
-                        {% for diskgroup in diskgroup_results | default([]) %}
-                            {% for alert in diskgroup.diskgroups_alerts %}
-                            <tr class="critical-alert">
-                                <td><strong>{{ diskgroup.instancia }}</strong></td>
-                                <td>{{ alert[0] | default('N/A') }}</td>
-                                <td><strong>{{ alert[1] | default('N/A') }}</strong></td>
-                                <td>{{ alert[2] | default('N/A') }}</td>
-                                <td>{{ alert[3] | default('N/A') }}</td>
-                                <td>{{ alert[4] | default('N/A') }}</td>
-                                <td>{{ alert[5] | default('N/A') }}</td>
-                                <td><span class="status-danger">{{ (alert[7] | default(0) | float) | round(1) }}%</span></td>
-                                <td>
-                                    {% if alert[7] | default(0) | float > 90 %}
-                                        Ampliación urgente
-                                    {% else %}
-                                        Monitorear y planificar ampliación
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% endfor %}
+                        {% for dg in diskgroup_data %}{% for item in dg.data %}
+                        <tr class="critical-alert">
+                            <td><strong>{{ dg.instancia }}</strong></td>
+                            <td>{{ item[0] }}</td>
+                            <td><strong>{{ item[1] }}</strong></td>
+                            <td>{{ item[2] }}</td>
+                            <td>{{ item[4] }}</td>
+                            <td>{{ item[5] }}</td>
+                            <td><span class="status-danger">{{ (item[7] | float) | round(1) }}%</span></td>
+                            <td>{% if item[7] | float > 90 %}Ampliación urgente{% else %}Monitorear{% endif %}</td>
+                        </tr>
+                        {% endfor %}{% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -817,22 +546,11 @@
     
     <script>
         function openTab(tabName) {
-            // Ocultar todos los contenidos
             var contents = document.getElementsByClassName('tab-content');
-            for (var i = 0; i < contents.length; i++) {
-                contents[i].classList.remove('active');
-            }
-            
-            // Desactivar todos los botones
+            for (var i = 0; i < contents.length; i++) { contents[i].classList.remove('active'); }
             var buttons = document.getElementsByClassName('tab-button');
-            for (var i = 0; i < buttons.length; i++) {
-                buttons[i].classList.remove('active');
-            }
-            
-            // Mostrar el contenido seleccionado
+            for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
             document.getElementById(tabName).classList.add('active');
-            
-            // Activar el botón correspondiente
             event.target.classList.add('active');
         }
     </script>
