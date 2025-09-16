@@ -16,10 +16,10 @@
       loop_control:
         label: "{{ item.key }}"
       ansible.builtin.include_role:
-        name: oracle_connectivity
+        name: oracle_conn
       vars:
-        oracle_connectivity_current_database_key: "{{ item.key }}"
-        oracle_connectivity_current_database: "{{ item.value }}"
+        oracle_conn_current_database_key: "{{ item.key }}"
+        oracle_conn_current_database: "{{ item.value }}"
       when: target_database == '' or item.key == target_database
 
     # Validar jobs solo en DBs conectadas

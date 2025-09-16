@@ -24,10 +24,10 @@
     # FRENTE 1: CONECTIVIDAD
     - name: "FRENTE 1: Validar conectividad {{ item.key }}"
       ansible.builtin.include_role:
-        name: oracle_connectivity
+        name: oracle_conn
       vars:
-        oracle_connectivity_current_database_key: "{{ item.key }}"
-        oracle_connectivity_current_database: "{{ item.value }}"
+        oracle_conn_current_database_key: "{{ item.key }}"
+        oracle_conn_current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
@@ -35,10 +35,10 @@
     # FRENTE 2: BACKUPS (Solo DBs conectadas)
     - name: "FRENTE 2: Validar backups {{ item.instancia_key }}"
       ansible.builtin.include_role:
-        name: oracle_backups
+        name: oracle_bk
       vars:
-        oracle_backups_current_database_key: "{{ item.instancia_key }}"
-        oracle_backups_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        oracle_bk_current_database_key: "{{ item.instancia_key }}"
+        oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
       loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
       loop_control:
         label: "{{ item.instancia_key }}"

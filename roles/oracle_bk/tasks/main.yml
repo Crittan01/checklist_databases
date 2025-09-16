@@ -1,12 +1,12 @@
 ---
-# tasks file for roles/oracle_backups
-- name: "Validar backups últimas 12 horas en {{ oracle_backups_current_database_key }}"
+# tasks file for roles/oracle_bk
+- name: "Validar backups últimas 12 horas en {{ oracle_bk_current_database_key }}"
   opitzconsulting.ansible_oracle.oracle_sql:
-    hostname: "{{ oracle_backups_current_database.direccion_ip }}"
-    port: "{{ oracle_backups_current_database.puerto }}"
-    service_name: "{{ oracle_backups_current_database.cadena_tns }}"
-    username: "{{ oracle_backups_current_database.usuario }}"
-    password: "{{ oracle_backups_current_database.password }}"
+    hostname: "{{ oracle_bk_current_database.direccion_ip }}"
+    port: "{{ oracle_bk_current_database.puerto }}"
+    service_name: "{{ oracle_bk_current_database.cadena_tns }}"
+    username: "{{ oracle_bk_current_database.usuario }}"
+    password: "{{ oracle_bk_current_database.password }}"
     sql: |
       SELECT
         vi.host_name as HOST,
@@ -26,7 +26,7 @@
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Analizar backups individualmente {{ oracle_backups_current_database_key }}"
+- name: "Analizar backups individualmente {{ oracle_bk_current_database_key }}"
   ansible.builtin.debug:
     msg:
       - "=== BACKUP INDIVIDUAL ANÁLISIS ==="
@@ -42,7 +42,7 @@
     label: "{{ item[1] | default('N/A') }} - {{ item[2] | default('N/A') }}"
   when: not (backup_validation_result.failed | default(true))
 
-- name: "Procesar resultados de backups {{ oracle_backups_current_database_key }}"
+- name: "Procesar resultados de backups {{ oracle_bk_current_database_key }}"
   ansible.builtin.set_fact:
     backup_results: "{{ backup_results + [backup_item] }}"
   vars:
@@ -54,10 +54,10 @@
     has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"
 
     backup_item:
-      instancia_key: "{{ oracle_backups_current_database_key }}"
-      instancia: "{{ oracle_backups_current_database.instancia }}"
-      host: "{{ oracle_backups_current_database.host }}"
-      direccion_ip: "{{ oracle_backups_current_database.direccion_ip }}"
+      instancia_key: "{{ oracle_bk_current_database_key }}"
+      instancia: "{{ oracle_bk_current_database.instancia }}"
+      host: "{{ oracle_bk_current_database.host }}"
+      direccion_ip: "{{ oracle_bk_current_database.direccion_ip }}"
 
       backup_validation_successful: "{{ validation_successful }}"
       backup_validation_error: "{{ backup_validation_result.msg | default('') if backup_validation_result.failed | default(false) else '' }}"
@@ -79,10 +79,10 @@
 
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
 
-- name: "Resumen de backups {{ oracle_backups_current_database_key }}"
+- name: "Resumen de backups {{ oracle_bk_current_database_key }}"
   ansible.builtin.debug:
     msg:
-      - "=== RESUMEN BACKUPS {{ oracle_backups_current_database_key }} ==="
+      - "=== RESUMEN BACKUPS {{ oracle_bk_current_database_key }} ==="
       - "Validación: {{ 'EXITOSA' if not (backup_validation_result.failed | default(true)) else 'ERROR' }}"
       - "Total backups encontrados: {{ backup_validation_result.query_result
         | default([]) | length if not (backup_validation_result.failed | default(true)) else 0 }}"

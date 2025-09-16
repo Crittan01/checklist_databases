@@ -28,10 +28,10 @@
       loop_control:
         label: "{{ item.instancia_key }}"
       ansible.builtin.include_role:
-        name: oracle_backups
+        name: oracle_bk
       vars:
-        oracle_backups_current_database_key: "{{ item.instancia_key }}"
-        oracle_backups_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        oracle_bk_current_database_key: "{{ item.instancia_key }}"
+        oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
 
     # GENERAR REPORTE HTML ESPECÍFICO BACKUPS
     - name: "Generar reporte HTML de backups"

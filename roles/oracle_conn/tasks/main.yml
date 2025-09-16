@@ -1,0 +1,44 @@
+---
+# tasks file for roles/oracle_conn
+- name: "Probar conexión básica a {{ oracle_conn_current_database_key }}"
+  opitzconsulting.ansible_oracle.oracle_sql:
+    hostname: "{{ oracle_conn_current_database.direccion_ip }}"
+    port: "{{ oracle_conn_current_database.puerto }}"
+    service_name: "{{ oracle_conn_current_database.cadena_tns }}"
+    username: "{{ oracle_conn_current_database.usuario }}"
+    password: "{{ oracle_conn_current_database.password }}"
+    sql: "SELECT 1 FROM dual"
+    mode: normal
+  register: connection_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar resultado de conectividad {{ oracle_conn_current_database_key }}"
+  ansible.builtin.set_fact:
+    connectivity_results: "{{ connectivity_results + [connectivity_item] }}"
+  vars:
+    is_successful: "{{ not (connection_result.failed | default(true)) }}"
+    connectivity_item:
+      instancia_key: "{{ oracle_conn_current_database_key }}"
+      instancia: "{{ oracle_conn_current_database.instancia }}"
+      host: "{{ oracle_conn_current_database.host }}"
+      direccion_ip: "{{ oracle_conn_current_database.direccion_ip }}"
+      puerto: "{{ oracle_conn_current_database.puerto }}"
+      cadena_tns: "{{ oracle_conn_current_database.cadena_tns }}"
+      usuario: "{{ oracle_conn_current_database.usuario }}"
+      motor_bd: "{{ oracle_conn_current_database.motor_bd }}"
+      sistema_operativo: "{{ oracle_conn_current_database.sistema_operativo }}"
+      release_so: "{{ oracle_conn_current_database.release_so }}"
+      release_bd: "{{ oracle_conn_current_database.release_bd }}"
+
+      connection_successful: "{{ is_successful }}"
+      connection_error: "{{ connection_result.msg | default('') if connection_result.failed | default(false) else '' }}"
+      database_info: "{{ {'status': 'connected'} if is_successful else {} }}"
+      test_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Mostrar estado de conexión {{ oracle_conn_current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "Instancia: {{ oracle_conn_current_database_key }}"
+      - "Estado: {{ 'CONECTADA' if not (connection_result.failed | default(true)) else 'ERROR' }}"
+      - "{{ 'Conexión exitosa' if not (connection_result.failed | default(true)) else 'Error: ' + (connection_result.msg | default('Error desconocido')) }}"

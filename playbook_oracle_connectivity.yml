@@ -11,10 +11,10 @@
   tasks:
     - name: "Validar conectividad {{ item.key }}"
       ansible.builtin.include_role:
-        name: oracle_connectivity
+        name: oracle_conn
       vars:
-        oracle_connectivity_current_database_key: "{{ item.key }}"
-        oracle_connectivity_current_database: "{{ item.value }}"
+        oracle_conn_current_database_key: "{{ item.key }}"
+        oracle_conn_current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
