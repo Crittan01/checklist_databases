@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oracle Database Inventory Report</title>
+    <title>Oracle Database Check Report</title>
     <style>
         :root {
             --primary-color: #1f4e79;
@@ -273,7 +273,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>Oracle Database Inventory Report</h1>
+            <h1>Oracle Database Check Report</h1>
             <div class="header-info">
                 <div>
                     {% set unique_hosts = connectivity_results | map(attribute='host') | list | unique | list %}
@@ -318,7 +318,7 @@
             <div class="summary-card">
                 <h2 class="summary-title">Estado de Alertas por Dominio</h2>
                 <div class="metric">
-                    <div class="metric-value" style="color: {{ 'var(--success-color)' if stats.total_alerts | int == 0 else 'var(--danger-color)' }};">
+                    <div class="metric-value" style="color: {{ 'var(--success-color)' if stats.total_alerts | int == 0 and stats.successful_conns | int > 0 else 'var(--danger-color)' }};">
                         {{ stats.total_alerts }}
                     </div>
                     <div class="metric-label">Total Alertas</div>
@@ -339,13 +339,23 @@
                         </tr>
                         <tr>
                             <td><strong>Backups</strong></td>
-                            <td>{{ stats.total_backup_alerts }} alertas</td>
-                            <td>{% if stats.backup_errors_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% elif stats.instances_no_archivelog_count | int > 0 %}<span class="status-warning">VERIFICAR</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                            {% if stats.successful_conns | int == 0 %}
+                                <td>No evaluado</td>
+                                <td><span class="status-info">NO EVALUADO</span></td>
+                            {% else %}
+                                <td>{{ stats.total_backup_alerts }} alertas</td>
+                                <td>{% if stats.backup_errors_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% elif stats.instances_no_archivelog_count | int > 0 %}<span class="status-warning">VERIFICAR</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                            {% endif %}
                         </tr>
                         <tr>
                             <td><strong>Jobs</strong></td>
-                            <td>{{ stats.broken_jobs_count }} jobs broken</td>
-                            <td>{% if stats.broken_jobs_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                            {% if stats.successful_conns | int == 0 %}
+                                <td>No evaluado</td>
+                                <td><span class="status-info">NO EVALUADO</span></td>
+                            {% else %}
+                                <td>{{ stats.broken_jobs_count }} jobs broken</td>
+                                <td>{% if stats.broken_jobs_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                            {% endif %}
                         </tr>
                     </tbody>
                 </table>
@@ -410,10 +420,11 @@
         <!-- Frente 2: Información Operacional COMPLETA -->
         <div id="frente2" class="tab-content">
             <h2>Información Operacional Completa</h2>
-            <p><strong>Vista total de todos los datos operacionales sin filtros</strong> - Información completa para análisis y trazabilidad.</p>
-            
+            <p><strong>IMPORTANTE</strong> - Información completa para análisis y trazabilidad.</p>
+            <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+
             <!-- TABLA CONSOLIDADA DE BACKUPS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Información Completa de Backups (Últimas 12 horas)</h3>
+            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Backups (Últimas 12 horas)</h3>
             <div class="summary-stats">
                 <p><strong>Resumen Global:</strong> 
                 {% set global_backups = backup_results | map(attribute='total_backups') | map('int') | sum %}
@@ -483,7 +494,7 @@
             {% endif %}
             
             <!-- TABLA CONSOLIDADA DE JOBS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">Estado Completo de Jobs Oracle</h3>
+            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
             <div class="summary-stats">
                 <p><strong>Resumen Global:</strong> 
                 {% set global_jobs = job_results | map(attribute='total_jobs') | map('int') | sum %}
@@ -557,8 +568,9 @@
         <!-- Frente 3: SOLO Alertas Críticas -->
         <div id="frente3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
-            <p><strong>Solo elementos que ameritan validación administrativa</strong> - Acciones requeridas para mantener operatividad.</p>
-            
+            <p><strong>IMPORTANTE</strong> - Acciones requeridas que ameritan validación administrativa.</p>
+            <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+
             {% if stats.total_alerts | int == 0 %}
             <div class="no-alerts">
                 <h3>Sistema Operacional</h3>
@@ -570,7 +582,7 @@
             <!-- ALERTAS CRÍTICAS DE CONECTIVIDAD -->
             {% if stats.failed_conns | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">🔴 CRÍTICO: Bases de Datos Sin Conexión ({{ stats.failed_conns }})</h3>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Bases de Datos Sin Conexión ({{ stats.failed_conns }})</h3>
                 <p><strong>Acción requerida:</strong> Verificar servicios, listener y conectividad de red inmediatamente.</p>
                 <table>
                     <thead>
@@ -602,7 +614,7 @@
             <!-- ALERTAS CRÍTICAS DE BACKUPS FALLIDOS -->
             {% if stats.backup_errors_count | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">🔴 CRÍTICO: Backups Fallidos ({{ stats.backup_errors_count }})</h3>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Backups Fallidos ({{ stats.backup_errors_count }})</h3>
                 <p><strong>Acción requerida:</strong> Investigar y corregir fallos de backup inmediatamente.</p>
                 <table>
                     <thead>
@@ -634,7 +646,7 @@
             <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
             {% if stats.instances_no_archivelog_count | int > 0 %}
             <div class="warning-section">
-                <h3 style="color: var(--warning-color);">⚠️ ADVERTENCIA: Sin ARCHIVELOG en 12h ({{ stats.instances_no_archivelog_count }})</h3>
+                <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG en 12h ({{ stats.instances_no_archivelog_count }})</h3>
                 <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
                 <table>
                     <thead>
@@ -664,7 +676,7 @@
             <!-- ALERTAS CRÍTICAS DE JOBS -->
             {% if stats.broken_jobs_count | int > 0 %}
             <div class="alert-section">
-                <h3 style="color: var(--danger-color);">🔴 CRÍTICO: Jobs en Estado BROKEN ({{ stats.broken_jobs_count }})</h3>
+                <h3 style="color: var(--danger-color);">CRÍTICO: Jobs en Estado BROKEN ({{ stats.broken_jobs_count }})</h3>
                 <p><strong>Acción requerida:</strong> Reparar o deshabilitar jobs broken inmediatamente.</p>
                 <table>
                     <thead>

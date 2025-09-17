@@ -1,0 +1,6 @@
+ansible-navigator.log
+# Mantener el directorio pero ignorar archivos específicos
+# Primero, NO ignorar el directorio
+!reports/
+# Luego, ignorar los archivos específicos dentro del directorio
+reports/*.html
