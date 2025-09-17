@@ -171,16 +171,22 @@
             <h2>Información Operacional Completa</h2>
             <p><span class="status-warning">IMPORTANTE</span> - Solo se evalúan instancias con conectividad exitosa.</p>
 
-            <!-- ESTADO DE JOBS ORACLE -->
+            <!-- ESTADO DE JOBS ORACLE CON DESPLEGABLE SIMPLE -->
             <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
             <div class="summary-stats">
                 <p><strong>Resumen Global:</strong> 
                 {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
                 {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
                 Solo se consultan Jobs BROKEN (filtro administrativo) | 
-                Total broken: {{ global_broken }} | 
+                Total broken: <strong>{{ global_broken }}</strong> | 
                 Con failures > 0: {{ global_failures }}
                 </p>
+                
+                {% if global_broken > 0 %}
+                <button onclick="toggleJobsDetail()" class="toggle-detail-btn" id="jobs-toggle">
+                    ▼ Ver detalle de {{ global_broken }} jobs broken
+                </button>
+                {% endif %}
             </div>
 
             {% if job_results | length > 0 %}
@@ -217,7 +223,7 @@
                     </tr>
                     {% if not job.jobs_validation_successful %}
                     <tr>
-                        <td colspan="6">
+                        <td colspan="5">
                             <div class="error-details">
                                 <strong>Error:</strong> {{ job.jobs_validation_error }}
                             </div>
@@ -228,44 +234,45 @@
                 </tbody>
             </table>
 
-            <!-- TABLA DETALLADA DE JOBS BROKEN (solo si existen) -->
-            {% set global_broken_jobs = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
-            {% if global_broken_jobs > 0 %}
-            <h4 style="color: var(--danger-color); margin-top: 20px;">DETALLE: Jobs en Estado BROKEN</h4>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Host</th>
-                        <th>Instancia DB</th>
-                        <th>Job ID</th>
-                        <th>Schema</th>
-                        <th>Failures</th>
-                        <th>Estado</th>
-                        <th>Last Date</th>
-                        <th>What (Truncado)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in job_results %}
-                        {% if job.broken_jobs_count | int > 0 %}
-                            {% for broken in job.broken_jobs %}
-                            <tr class="critical-alert">
-                                <td>{{ broken[0] | default('N/A') }}</td>      <!-- HOST_NAME -->
-                                <td>{{ broken[1] | default('N/A') }}</td>      <!-- INSTANCIA -->
-                                <td><strong>{{ broken[2] | default('N/A') }}</strong></td> <!-- JOB -->
-                                <td>{{ broken[3] | default('N/A') }}</td>      <!-- SCHEMA_USER -->
-                                <td>{{ broken[4] | default('0') }}</td>        <!-- FAIL -->
-                                <td><span class="status-danger">BROKEN</span></td> 
-                                <td>{{ broken[6] | default('N/A') }}</td>      <!-- LAST_DATE -->
-                                <td style="max-width: 200px; word-wrap: break-word;">
-                                    {{ (broken[7] | default('N/A') | string)[:100] }}{% if (broken[7] | default('') | string | length) > 100 %}...{% endif %}
-                                </td> <!-- WHAT truncado -->
-                            </tr>
-                            {% endfor %}
-                        {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- TABLA DETALLADA COLAPSIBLE SIMPLE -->
+            {% if global_broken > 0 %}
+            <div id="jobs-detail" class="collapsible-section">
+                <div class="detail-header">
+                    DETALLE: Jobs en Estado BROKEN ({{ global_broken }} encontrados)
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Host</th>
+                            <th>Instancia</th>
+                            <th>Job ID</th>
+                            <th>Schema</th>
+                            <th>Failures</th>
+                            <th>Last Date</th>
+                            <th>What (Comando)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in job_results %}
+                            {% if job.broken_jobs_count | int > 0 %}
+                                {% for broken in job.broken_jobs %}
+                                <tr class="critical-alert">
+                                    <td>{{ broken[0] | default('N/A') }}</td>
+                                    <td><strong>{{ broken[1] | default('N/A') }}</strong></td>
+                                    <td>{{ broken[2] | default('N/A') }}</td>
+                                    <td>{{ broken[3] | default('N/A') }}</td>
+                                    <td>{{ broken[4] | default('0') }}</td>
+                                    <td>{{ broken[6] | default('N/A') }}</td>
+                                    <td class="truncated-text" title="{{ broken[7] | default('N/A') | string }}">
+                                        {{ (broken[7] | default('N/A') | string)[:60] }}{% if (broken[7] | default('') | string | length) > 60 %}...{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
 
             {% else %}
@@ -338,7 +345,7 @@
 
             {% if stats.total_alerts | int == 0 %}
             <div class="no-alerts">
-                <h3 style="color: var(--success-color);">✓ Sistema Operacional</h3>
+                <h3>✓ Sistema Operacional</h3>
                 <p>No se detectaron alertas críticas que requieran atención administrativa.</p>
                 <p><strong>Todas las validaciones están en estado satisfactorio.</strong></p>
             </div>
@@ -366,7 +373,9 @@
                             <td><strong>{{ conn.instancia }}</strong></td>
                             <td>{{ conn.host }}</td>
                             <td>{{ conn.direccion_ip }}:{{ conn.puerto }}</td>
-                            <td>{{ conn.connection_error | truncate(50) }}</td>
+                            <td class="truncated-text" title="{{ conn.connection_error }}">
+                                {{ conn.connection_error[:50] }}{% if conn.connection_error | length > 50 %}...{% endif %}
+                            </td>
                             <td>Verificar listener y servicios Oracle</td>
                         </tr>
                         {% endif %}
@@ -384,7 +393,6 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Host</th>
                             <th>Instancia</th>
                             <th>Job ID</th>
                             <th>Schema</th>
@@ -397,12 +405,11 @@
                         {% for job in job_results %}
                             {% for broken in job.broken_jobs %}
                             <tr class="critical-alert">
-                                <td>{{ broken[0] | default('N/A') }}</td>      <!-- HOST_NAME -->
-                                <td><strong>{{ broken[1] | default('N/A') }}</strong></td> <!-- INSTANCIA -->
-                                <td>{{ broken[2] | default('N/A') }}</td>      <!-- JOB -->
-                                <td>{{ broken[3] | default('N/A') }}</td>      <!-- SCHEMA_USER -->
-                                <td>{{ broken[4] | default('0') }}</td>        <!-- FAIL -->
-                                <td>{{ broken[6] | default('N/A') }}</td>      <!-- LAST_DATE -->
+                                <td><strong>{{ broken[1] | default('N/A') }}</strong></td>
+                                <td>{{ broken[2] | default('N/A') }}</td>
+                                <td>{{ broken[3] | default('N/A') }}</td>
+                                <td>{{ broken[4] | default('0') }}</td>
+                                <td>{{ broken[6] | default('N/A') }}</td>
                                 <td>Revisar job y corregir o deshabilitar</td>
                             </tr>
                             {% endfor %}
@@ -480,24 +487,34 @@
     </div>
     
     <script>
+        // Función simple para alternar tabs
         function openTab(tabName) {
-            // Ocultar todos los contenidos
             var contents = document.getElementsByClassName('tab-content');
             for (var i = 0; i < contents.length; i++) {
                 contents[i].classList.remove('active');
             }
             
-            // Desactivar todos los botones
             var buttons = document.getElementsByClassName('tab-button');
             for (var i = 0; i < buttons.length; i++) {
                 buttons[i].classList.remove('active');
             }
             
-            // Mostrar el contenido seleccionado
             document.getElementById(tabName).classList.add('active');
-            
-            // Activar el botón correspondiente
             event.target.classList.add('active');
+        }
+
+        // Función simple para mostrar/ocultar detalle de jobs
+        function toggleJobsDetail() {
+            var detailSection = document.getElementById('jobs-detail');
+            var toggleBtn = document.getElementById('jobs-toggle');
+            
+            if (detailSection.classList.contains('expanded')) {
+                detailSection.classList.remove('expanded');
+                toggleBtn.innerHTML = '▼ Ver detalle de jobs broken';
+            } else {
+                detailSection.classList.add('expanded');
+                toggleBtn.innerHTML = '▲ Ocultar detalle de jobs broken';
+            }
         }
     </script>
 </body>
