@@ -17,7 +17,7 @@
   ansible.builtin.set_fact:
     connectivity_results: "{{ connectivity_results + [connectivity_item] }}"
   vars:
-    # LÓGICA CORREGIDA: Detectar errores Oracle por mensaje
+    # # Detectar errores Oracle por mensaje ORA
     has_oracle_error: "{{ (connection_result.msg | default('')) is search('ORA-') }}"
     is_successful: "{{ not (connection_result.failed | default(true)) and not has_oracle_error }}"
 
@@ -34,7 +34,7 @@
       release_so: "{{ oracle_conn_current_database.release_so }}"
       release_bd: "{{ oracle_conn_current_database.release_bd }}"
 
-      # CORREGIDO: Basado en mensaje de error Oracle
+      # Basado en mensaje de error Oracle
       connection_successful: "{{ is_successful }}"
       connection_error: "{{ connection_result.msg | default('Error desconocido') if not is_successful else '' }}"
       database_info: "{{ {'status': 'connected'} if is_successful else {} }}"
