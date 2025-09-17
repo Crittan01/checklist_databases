@@ -280,7 +280,7 @@
                                     </div>
                 <div><strong>Ejecutado desde:</strong> oracle9awx</div>
                 <div><strong>Fecha:</strong> 2025-09-16</div>
-                <div><strong>Hora:</strong> 19:24:44</div>
+                <div><strong>Hora:</strong> 19:42:58</div>
             </div>
         </div>
         
@@ -289,7 +289,7 @@
             <div class="summary-card">
                 <h2 class="summary-title">Resumen de Conectividad</h2>
                 <div class="metric">
-                    <div class="metric-value">100%</div>
+                    <div class="metric-value">75%</div>
                     <div class="metric-label">Conectividad</div>
                 </div>
                 <table style="margin: 10px 0; box-shadow: none;">
@@ -299,11 +299,11 @@
                     </tr>
                     <tr style="background: rgba(39, 174, 96, 0.1);">
                         <td><strong>Conectadas:</strong></td>
-                        <td>4</td>
+                        <td>3</td>
                     </tr>
                     <tr style="background: rgba(231, 76, 60, 0.1);">
                         <td><strong>Fallidas:</strong></td>
-                        <td>0</td>
+                        <td>1</td>
                     </tr>
                 </table>
             </div>
@@ -327,12 +327,12 @@
                     <tbody>
                         <tr>
                             <td><strong>Conectividad</strong></td>
-                            <td>0 bases sin acceso</td>
-                            <td><span class="status-success">OK</span></td>
+                            <td>1 bases sin acceso</td>
+                            <td><span class="status-danger">CRÍTICO</span></td>
                         </tr>
                         <tr>
                             <td><strong>Backups</strong></td>
-                            <td>4 alertas</td>
+                            <td>3 alertas</td>
                             <td><span class="status-warning">VERIFICAR</span></td>
                         </tr>
                         <tr>
@@ -379,7 +379,7 @@
                         <td>
                                                             <span class="status-success">CONECTADA</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="">
                         <td><strong>dbprueba</strong></td>
@@ -390,7 +390,7 @@
                         <td>
                                                             <span class="status-success">CONECTADA</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="">
                         <td><strong>PRUEBA</strong></td>
@@ -401,18 +401,26 @@
                         <td>
                                                             <span class="status-success">CONECTADA</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
-                                                            <tr class="">
+                                                            <tr class="critical-alert">
                         <td><strong>dbotro</strong></td>
                         <td>oracle7db</td>
                         <td>192.168.20.230:1521</td>
                         <td>dbotro</td>
                         <td>ansible_user</td>
                         <td>
-                                                            <span class="status-success">CONECTADA</span>
+                                                            <span class="status-danger">ERROR</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
+                    </tr>
+                                        <tr class="critical-alert">
+                        <td colspan="7">
+                            <div class="error-details">
+                                <strong>Error:</strong> Could not connect to database - ORA-12514: Cannot connect to database. Service dbotro is not registered with the listener at host 192.168.20.230 port 1521. (CONNECTION_ID=PvWEw6d1PH3gY1UUqMA32g==)
+Help: https://docs.oracle.com/error-help/db/ora-12514/, connect descriptor: (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.20.230)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=dbotro)))
+                            </div>
+                        </td>
                     </tr>
                                                         </tbody>
             </table>
@@ -430,7 +438,7 @@
                                                                 Total backups: 0 | 
                 Fallidos: 0 | 
                 ARCHIVELOG: 0 | 
-                Instancias sin ARCHIVELOG: 4
+                Instancias sin ARCHIVELOG: 3
                 </p>
             </div>
             
@@ -460,7 +468,7 @@
                         <td>
                                                             <span class="status-warning">SIN ARCHIVELOG 12H</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="warning-alert">
                         <td><strong>dbprueba</strong></td>
@@ -474,7 +482,7 @@
                         <td>
                                                             <span class="status-warning">SIN ARCHIVELOG 12H</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="warning-alert">
                         <td><strong>PRUEBA</strong></td>
@@ -488,21 +496,7 @@
                         <td>
                                                             <span class="status-warning">SIN ARCHIVELOG 12H</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
-                    </tr>
-                                                            <tr class="warning-alert">
-                        <td><strong>dbotro</strong></td>
-                        <td>
-                                                            <span class="status-success">EXITOSA</span>
-                                                    </td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>
-                                                            <span class="status-warning">SIN ARCHIVELOG 12H</span>
-                                                    </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                         </tbody>
             </table>
@@ -543,7 +537,7 @@
                         <td>
                                                             <span class="status-success">OPERACIONAL</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="">
                         <td><strong>dbprueba</strong></td>
@@ -557,7 +551,7 @@
                         <td>
                                                             <span class="status-success">OPERACIONAL</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                             <tr class="">
                         <td><strong>PRUEBA</strong></td>
@@ -571,21 +565,7 @@
                         <td>
                                                             <span class="status-success">OPERACIONAL</span>
                                                     </td>
-                        <td>2025-09-17 00:24:44</td>
-                    </tr>
-                                                            <tr class="">
-                        <td><strong>dbotro</strong></td>
-                        <td>
-                                                            <span class="status-success">EXITOSA</span>
-                                                    </td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>
-                                                            <span class="status-success">OPERACIONAL</span>
-                                                    </td>
-                        <td>2025-09-17 00:24:44</td>
+                        <td>2025-09-17 00:42:58</td>
                     </tr>
                                                         </tbody>
             </table>
@@ -598,12 +578,36 @@
             
             
             <!-- ALERTAS CRÍTICAS DE CONECTIVIDAD -->
+                        <div class="alert-section">
+                <h3 style="color: var(--danger-color);">🔴 CRÍTICO: Bases de Datos Sin Conexión (1)</h3>
+                <p><strong>Acción requerida:</strong> Verificar servicios, listener y conectividad de red inmediatamente.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Instancia</th>
+                            <th>Host</th>
+                            <th>IP:Puerto</th>
+                            <th>Error</th>
+                            <th>Acción Sugerida</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                                                                                                                                                                                                        <tr class="critical-alert">
+                            <td><strong>dbotro</strong></td>
+                            <td>oracle7db</td>
+                            <td>192.168.20.230:1521</td>
+                            <td>Could not connect to database - ORA-12514:...</td>
+                            <td>Verificar listener y servicios Oracle</td>
+                        </tr>
+                                                                    </tbody>
+                </table>
+            </div>
             
             <!-- ALERTAS CRÍTICAS DE BACKUPS FALLIDOS -->
             
             <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
                         <div class="warning-section">
-                <h3 style="color: var(--warning-color);">⚠️ ADVERTENCIA: Sin ARCHIVELOG en 12h (4)</h3>
+                <h3 style="color: var(--warning-color);">⚠️ ADVERTENCIA: Sin ARCHIVELOG en 12h (3)</h3>
                 <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
                 <table>
                     <thead>
@@ -629,12 +633,6 @@
                         </tr>
                                                                                                 <tr class="warning-alert">
                             <td><strong>PRUEBA</strong></td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>Configurar backup automático de ARCHIVELOG</td>
-                        </tr>
-                                                                                                <tr class="warning-alert">
-                            <td><strong>dbotro</strong></td>
                             <td>0</td>
                             <td>0</td>
                             <td>Configurar backup automático de ARCHIVELOG</td>

@@ -17,7 +17,10 @@
   ansible.builtin.set_fact:
     connectivity_results: "{{ connectivity_results + [connectivity_item] }}"
   vars:
-    is_successful: "{{ not (connection_result.failed | default(true)) }}"
+    # LÓGICA CORREGIDA: Detectar errores Oracle por mensaje
+    has_oracle_error: "{{ (connection_result.msg | default('')) is search('ORA-') }}"
+    is_successful: "{{ not (connection_result.failed | default(true)) and not has_oracle_error }}"
+
     connectivity_item:
       instancia_key: "{{ oracle_conn_current_database_key }}"
       instancia: "{{ oracle_conn_current_database.instancia }}"
@@ -31,8 +34,9 @@
       release_so: "{{ oracle_conn_current_database.release_so }}"
       release_bd: "{{ oracle_conn_current_database.release_bd }}"
 
+      # CORREGIDO: Basado en mensaje de error Oracle
       connection_successful: "{{ is_successful }}"
-      connection_error: "{{ connection_result.msg | default('') if connection_result.failed | default(false) else '' }}"
+      connection_error: "{{ connection_result.msg | default('Error desconocido') if not is_successful else '' }}"
       database_info: "{{ {'status': 'connected'} if is_successful else {} }}"
       test_timestamp: "{{ ansible_date_time.iso8601 }}"
 
@@ -40,5 +44,7 @@
   ansible.builtin.debug:
     msg:
       - "Instancia: {{ oracle_conn_current_database_key }}"
-      - "Estado: {{ 'CONECTADA' if not (connection_result.failed | default(true)) else 'ERROR' }}"
-      - "{{ 'Conexión exitosa' if not (connection_result.failed | default(true)) else 'Error: ' + (connection_result.msg | default('Error desconocido')) }}"
+      - "Estado: {{ 'CONECTADA' if not (connection_result.failed | default(true))
+        and not ((connection_result.msg | default('')) is search('ORA-')) else 'ERROR' }}"
+      - "{{ 'Conexión exitosa' if not (connection_result.failed | default(true))
+        and not ((connection_result.msg | default('')) is search('ORA-')) else 'Error: ' + (connection_result.msg | default('Error desconocido')) }}"
