@@ -1,7 +1,7 @@
 ---
 # tasks file for roles/oracle_conn
 - name: "Probar conexión básica a {{ oracle_conn_current_database_key }}"
-  opitzconsulting.ansible_oracle.oracle_sql:
+  mi_org.oracle.oracle_sql_async:
     hostname: "{{ oracle_conn_current_database.direccion_ip }}"
     port: "{{ oracle_conn_current_database.puerto }}"
     service_name: "{{ oracle_conn_current_database.cadena_tns }}"

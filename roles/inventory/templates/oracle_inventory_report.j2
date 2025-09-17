@@ -64,7 +64,13 @@
                         <tr>
                             <td><strong>Conectividad</strong></td>
                             <td>{{ stats.failed_conns }} bases sin acceso</td>
-                            <td>{% if stats.failed_conns | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                            <td>
+                                {% if stats.failed_conns | int > 0 %}
+                                    <span class="status-danger">CRÍTICO</span>
+                                {% else %}
+                                    <span class="status-success">OK</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Backups</strong></td>
@@ -73,7 +79,15 @@
                                 <td><span class="status-info">NO EVALUADO</span></td>
                             {% else %}
                                 <td>{{ stats.total_backup_alerts }} alertas</td>
-                                <td>{% if stats.backup_errors_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% elif stats.instances_no_archivelog_count | int > 0 %}<span class="status-warning">VERIFICAR</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                                <td>
+                                    {% if stats.backup_errors_count | int > 0 %}
+                                        <span class="status-danger">CRÍTICO</span>
+                                    {% elif stats.instances_no_archivelog_count | int > 0 %}
+                                        <span class="status-warning">VERIFICAR</span>
+                                    {% else %}
+                                        <span class="status-success">OK</span>
+                                    {% endif %}
+                                </td>
                             {% endif %}
                         </tr>
                         <tr>
@@ -83,7 +97,13 @@
                                 <td><span class="status-info">NO EVALUADO</span></td>
                             {% else %}
                                 <td>{{ stats.broken_jobs_count }} jobs broken</td>
-                                <td>{% if stats.broken_jobs_count | int > 0 %}<span class="status-danger">CRÍTICO</span>{% else %}<span class="status-success">OK</span>{% endif %}</td>
+                                <td>
+                                    {% if stats.broken_jobs_count | int > 0 %}
+                                        <span class="status-danger">CRÍTICO</span>
+                                    {% else %}
+                                        <span class="status-success">OK</span>
+                                    {% endif %}
+                                </td>
                             {% endif %}
                         </tr>
                     </tbody>
@@ -146,27 +166,126 @@
             </table>
         </div>
         
-        <!-- Fase 2: Información Operacional COMPLETA -->
+        <!-- Fase 2: Información Operacional -->
         <div id="fase2" class="tab-content">
             <h2>Información Operacional Completa</h2>
-            <p><span class="status-warning">IMPORTANTE</span> - Información completa para análisis y trazabilidad.</p>
-            <p><span class="status-warning">NOTA</span> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+            <p><span class="status-warning">IMPORTANTE</span> - Solo se evalúan instancias con conectividad exitosa.</p>
 
-            <!-- TABLA CONSOLIDADA DE BACKUPS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Backups (Últimas 12 horas)</h3>
+            <!-- ESTADO DE JOBS ORACLE -->
+            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
             <div class="summary-stats">
                 <p><strong>Resumen Global:</strong> 
-                {% set global_backups = backup_results | map(attribute='total_backups') | map('int') | sum %}
-                {% set global_failed = backup_results | map(attribute='failed_backups') | map('int') | sum %}
-                {% set global_archivelog = backup_results | map(attribute='archivelog_count') | map('int') | sum %}
-                Total backups: {{ global_backups }} | 
-                Fallidos: {{ global_failed }} | 
-                ARCHIVELOG: {{ global_archivelog }} | 
-                Instancias sin ARCHIVELOG: {{ stats.instances_no_archivelog_count }}
+                {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
+                {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
+                Solo se consultan Jobs BROKEN (filtro administrativo) | 
+                Total broken: {{ global_broken }} | 
+                Con failures > 0: {{ global_failures }}
                 </p>
             </div>
+
+            {% if job_results | length > 0 %}
+            <table class="operational-table">
+                <thead>
+                    <tr>
+                        <th>Instancia</th>
+                        <th>Estado Validación</th>
+                        <th>Jobs BROKEN</th>
+                        <th>Estado General</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in job_results %}
+                    <tr class="{{ 'critical-alert' if job.broken_jobs_count | int > 0 else '' }}">
+                        <td><strong>{{ job.instancia }}</strong></td>
+                        <td>
+                            {% if job.jobs_validation_successful %}
+                                <span class="status-success">EXITOSA</span>
+                            {% else %}
+                                <span class="status-danger">ERROR</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ job.broken_jobs_count }}</td>
+                        <td>
+                            {% if job.broken_jobs_count | int > 0 %}
+                                <span class="status-danger">CRÍTICO</span>
+                            {% else %}
+                                <span class="status-success">SIN BROKEN JOBS</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ job.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                    </tr>
+                    {% if not job.jobs_validation_successful %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="error-details">
+                                <strong>Error:</strong> {{ job.jobs_validation_error }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- TABLA DETALLADA DE JOBS BROKEN (solo si existen) -->
+            {% set global_broken_jobs = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
+            {% if global_broken_jobs > 0 %}
+            <h4 style="color: var(--danger-color); margin-top: 20px;">DETALLE: Jobs en Estado BROKEN</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Host</th>
+                        <th>Instancia DB</th>
+                        <th>Job ID</th>
+                        <th>Schema</th>
+                        <th>Failures</th>
+                        <th>Estado</th>
+                        <th>Last Date</th>
+                        <th>What (Truncado)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in job_results %}
+                        {% if job.broken_jobs_count | int > 0 %}
+                            {% for broken in job.broken_jobs %}
+                            <tr class="critical-alert">
+                                <td>{{ broken[0] | default('N/A') }}</td>      <!-- HOST_NAME -->
+                                <td>{{ broken[1] | default('N/A') }}</td>      <!-- INSTANCIA -->
+                                <td><strong>{{ broken[2] | default('N/A') }}</strong></td> <!-- JOB -->
+                                <td>{{ broken[3] | default('N/A') }}</td>      <!-- SCHEMA_USER -->
+                                <td>{{ broken[4] | default('0') }}</td>        <!-- FAIL -->
+                                <td><span class="status-danger">BROKEN</span></td> 
+                                <td>{{ broken[6] | default('N/A') }}</td>      <!-- LAST_DATE -->
+                                <td style="max-width: 200px; word-wrap: break-word;">
+                                    {{ (broken[7] | default('N/A') | string)[:100] }}{% if (broken[7] | default('') | string | length) > 100 %}...{% endif %}
+                                </td> <!-- WHAT truncado -->
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            {% else %}
+            <div class="info-box">
+                <p>No hay datos de validación de jobs disponibles.</p>
+            </div>
+            {% endif %}
+
+            <!-- ESTADO DE BACKUPS ORACLE -->
+            <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: Backups (Últimas 12 horas)</h3>
+            <div class="summary-stats">
+                <p><strong>Criterio de Evaluación:</strong> Backups de últimas 12 horas con análisis de alertas</p>
+                {% if backup_results is defined %}
+                {% set global_backups = backup_results | map(attribute='total_backups') | map('int') | sum %}
+                {% set global_failed = backup_results | map(attribute='failed_backups') | map('int') | sum %}
+                <p><strong>Resumen Global:</strong> Total backups: {{ global_backups }} | Fallidos: {{ global_failed }} | Sin ARCHIVELOG: {{ stats.instances_no_archivelog_count }}</p>
+                {% endif %}
+            </div>
             
-            {% if backup_results | length > 0 %}
+            {% if backup_results is defined and backup_results | length > 0 %}
             <table class="operational-table">
                 <thead>
                     <tr>
@@ -177,12 +296,11 @@
                         <th>Fallidos</th>
                         <th>ARCHIVELOG</th>
                         <th>Estado ARCHIVELOG</th>
-                        <th>Timestamp</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for backup in backup_results %}
-                    <tr class="{{ 'warning-alert' if backup.no_archivelog_in_12h else '' }}">
+                    <tr class="{{ 'critical-alert' if backup.failed_backups | int > 0 else ('warning-alert' if backup.no_archivelog_in_12h else '') }}">
                         <td><strong>{{ backup.instancia }}</strong></td>
                         <td>
                             {% if backup.backup_validation_successful %}
@@ -202,17 +320,7 @@
                                 <span class="status-success">PRESENTE</span>
                             {% endif %}
                         </td>
-                        <td>{{ backup.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not backup.backup_validation_successful %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ backup.backup_validation_error }}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -221,88 +329,16 @@
                 <p>No hay datos de validación de backups disponibles.</p>
             </div>
             {% endif %}
-            
-            <!-- TABLA CONSOLIDADA DE JOBS -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
-            <div class="summary-stats">
-                <p><strong>Resumen Global:</strong> 
-                {% set global_jobs = job_results | map(attribute='total_jobs') | map('int') | sum %}
-                {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
-                {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
-                Total jobs: {{ global_jobs }} | 
-                Broken: {{ global_broken }} | 
-                Con failures: {{ global_failures }}
-                </p>
-            </div>
-            
-            {% if job_results | length > 0 %}
-            <table class="operational-table">
-                <thead>
-                    <tr>
-                        <th>Instancia</th>
-                        <th>Estado Validación</th>
-                        <th>Total Jobs</th>
-                        <th>Activos</th>
-                        <th>Broken</th>
-                        <th>Con Failures</th>
-                        <th>Estado General</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for job in job_results %}
-                    <tr class="{{ 'critical-alert' if job.broken_jobs_count | int > 0 else ('warning-alert' if job.jobs_with_failures_count | int > 0 else '') }}">
-                        <td><strong>{{ job.instancia }}</strong></td>
-                        <td>
-                            {% if job.jobs_validation_successful %}
-                                <span class="status-success">EXITOSA</span>
-                            {% else %}
-                                <span class="status-danger">ERROR</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.total_jobs }}</td>
-                        <td>{{ job.active_jobs }}</td>
-                        <td>{{ job.broken_jobs_count }}</td>
-                        <td>{{ job.jobs_with_failures_count }}</td>
-                        <td>
-                            {% if job.broken_jobs_count | int > 0 %}
-                                <span class="status-danger">CRÍTICO</span>
-                            {% elif job.jobs_with_failures_count | int > 0 %}
-                                <span class="status-warning">ADVERTENCIA</span>
-                            {% else %}
-                                <span class="status-success">OPERACIONAL</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ job.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
-                    </tr>
-                    {% if not job.jobs_validation_successful %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="error-details">
-                                <strong>Error:</strong> {{ job.jobs_validation_error }}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="info-box">
-                <p>No hay datos de validación de jobs disponibles.</p>
-            </div>
-            {% endif %}
         </div>
         
-        <!-- Fase 3: SOLO Alertas Críticas -->
+        <!-- Fase 3: Alertas Críticas -->
         <div id="fase3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
-            <p><span class="status-warning">IMPORTANTE</span> - Acciones requeridas que ameritan validación administrativa.</p>
-            <p><span class="status-warning">NOTA</span> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+            <p><span class="status-warning">IMPORTANTE</span> - Solo se muestran problemas que requieren acción administrativa inmediata.</p>
 
             {% if stats.total_alerts | int == 0 %}
             <div class="no-alerts">
-                <h3>Sistema Operacional</h3>
+                <h3 style="color: var(--success-color);">✓ Sistema Operacional</h3>
                 <p>No se detectaron alertas críticas que requieran atención administrativa.</p>
                 <p><strong>Todas las validaciones están en estado satisfactorio.</strong></p>
             </div>
@@ -340,8 +376,44 @@
             </div>
             {% endif %}
 
-            <!-- ALERTAS CRÍTICAS DE BACKUPS FALLIDOS -->
-            {% if stats.backup_errors_count | int > 0 %}
+            <!-- ALERTAS CRÍTICAS DE JOBS -->
+            {% if stats.broken_jobs_count | int > 0 %}
+            <div class="alert-section">
+                <h3 style="color: var(--danger-color);">CRÍTICO: Jobs en Estado BROKEN ({{ stats.broken_jobs_count }})</h3>
+                <p><strong>Acción requerida:</strong> Reparar o deshabilitar jobs broken inmediatamente.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Host</th>
+                            <th>Instancia</th>
+                            <th>Job ID</th>
+                            <th>Schema</th>
+                            <th>Failures</th>
+                            <th>Last Date</th>
+                            <th>Acción Sugerida</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in job_results %}
+                            {% for broken in job.broken_jobs %}
+                            <tr class="critical-alert">
+                                <td>{{ broken[0] | default('N/A') }}</td>      <!-- HOST_NAME -->
+                                <td><strong>{{ broken[1] | default('N/A') }}</strong></td> <!-- INSTANCIA -->
+                                <td>{{ broken[2] | default('N/A') }}</td>      <!-- JOB -->
+                                <td>{{ broken[3] | default('N/A') }}</td>      <!-- SCHEMA_USER -->
+                                <td>{{ broken[4] | default('0') }}</td>        <!-- FAIL -->
+                                <td>{{ broken[6] | default('N/A') }}</td>      <!-- LAST_DATE -->
+                                <td>Revisar job y corregir o deshabilitar</td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- ALERTAS DE BACKUPS FALLIDOS -->
+            {% if stats.backup_errors_count is defined and stats.backup_errors_count | int > 0 %}
             <div class="alert-section">
                 <h3 style="color: var(--danger-color);">CRÍTICO: Backups Fallidos ({{ stats.backup_errors_count }})</h3>
                 <p><strong>Acción requerida:</strong> Investigar y corregir fallos de backup inmediatamente.</p>
@@ -373,7 +445,7 @@
             {% endif %}
 
             <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
-            {% if stats.instances_no_archivelog_count | int > 0 %}
+            {% if stats.instances_no_archivelog_count is defined and stats.instances_no_archivelog_count | int > 0 %}
             <div class="warning-section">
                 <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG en 12h ({{ stats.instances_no_archivelog_count }})</h3>
                 <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
@@ -387,6 +459,7 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% if backup_results is defined %}
                         {% for backup in backup_results %}
                         {% if backup.no_archivelog_in_12h %}
                         <tr class="warning-alert">
@@ -397,38 +470,7 @@
                         </tr>
                         {% endif %}
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% endif %}
-
-            <!-- ALERTAS CRÍTICAS DE JOBS -->
-            {% if stats.broken_jobs_count | int > 0 %}
-            <div class="alert-section">
-                <h3 style="color: var(--danger-color);">CRÍTICO: Jobs en Estado BROKEN ({{ stats.broken_jobs_count }})</h3>
-                <p><strong>Acción requerida:</strong> Reparar o deshabilitar jobs broken inmediatamente.</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Instancia</th>
-                            <th>Job ID</th>
-                            <th>Schema</th>
-                            <th>Failures</th>
-                            <th>Acción Sugerida</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for job in job_results %}
-                            {% for broken in job.broken_jobs %}
-                            <tr class="critical-alert">
-                                <td><strong>{{ job.instancia }}</strong></td>
-                                <td>{{ broken[0] | default('N/A') }}</td>
-                                <td>{{ broken[1] | default('N/A') }}</td>
-                                <td>{{ broken[2] | default('0') }}</td>
-                                <td>Revisar job y corregir o deshabilitar</td>
-                            </tr>
-                            {% endfor %}
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>

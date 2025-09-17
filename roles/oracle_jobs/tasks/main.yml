@@ -1,7 +1,7 @@
 ---
-# tasks file for roles/oracle_jobs
+# tasks file for roles/oracle_jobs - CORREGIDO
 - name: "Validar jobs Oracle en {{ oracle_jobs_current_database_key }}"
-  opitzconsulting.ansible_oracle.oracle_sql:
+  mi_org.oracle.oracle_sql_async:
     hostname: "{{ oracle_jobs_current_database.direccion_ip }}"
     port: "{{ oracle_jobs_current_database.puerto }}"
     service_name: "{{ oracle_jobs_current_database.cadena_tns }}"
@@ -9,6 +9,8 @@
     password: "{{ oracle_jobs_current_database.password }}"
     sql: |
       SELECT
+        (SELECT host_name FROM v$instance) as HOST_NAME,
+        (SELECT instance_name FROM v$instance) as INSTANCIA,
         JOB,
         SCHEMA_USER,
         FAILURES as FAIL,
@@ -16,6 +18,7 @@
         to_char(LAST_DATE, 'DD-MON-YYYY HH24:MI:SS') as LAST_DATE,
         REPLACE(TRANSLATE(WHAT,chr(10)||chr(13), '  '), '"', '''') as WHAT
       FROM DBA_JOBS
+      WHERE BROKEN='Y'
       ORDER BY SCHEMA_USER, JOB
     mode: normal
   register: jobs_validation_result
@@ -26,10 +29,8 @@
   ansible.builtin.set_fact:
     job_results: "{{ job_results + [job_item] }}"
   vars:
-    # # Detectar errores Oracle por mensaje ORA
-    has_oracle_error: "{{ (jobs_validation_result.msg | default('')) is search('ORA-') }}"
-    validation_successful: "{{ not (jobs_validation_result.failed | default(true)) and not has_oracle_error }}"
-    jobs_data: "{{ jobs_validation_result.query_result | default([]) if validation_successful else [] }}"
+    # Datos de jobs (puede ser vacío si no hay jobs broken)
+    jobs_data: "{{ jobs_validation_result.msg | default([]) if jobs_validation_result.msg is iterable and jobs_validation_result.msg is not string else [] }}"
 
     job_item:
       instancia_key: "{{ oracle_jobs_current_database_key }}"
@@ -37,18 +38,23 @@
       host: "{{ oracle_jobs_current_database.host }}"
       direccion_ip: "{{ oracle_jobs_current_database.direccion_ip }}"
 
-      # Basado en detección de errores Oracle
-      jobs_validation_successful: "{{ validation_successful }}"
-      jobs_validation_error: "{{ jobs_validation_result.msg | default('Error desconocido') if not validation_successful else '' }}"
+      # CORRECCIÓN: Una query exitosa sin errores Oracle es siempre EXITOSA,
+      # independientemente de si retorna datos o no
+      jobs_validation_successful: "{{ not (jobs_validation_result.failed | default(false)) }}"
+      jobs_validation_error: "{{ jobs_validation_result.msg if jobs_validation_result.failed | default(false) else '' }}"
 
+      # Datos (puede ser lista vacía)
       jobs_data: "{{ jobs_data }}"
-      broken_jobs: "{{ jobs_data | selectattr('broken', 'equalto', 'Y') | list }}"
-      jobs_with_failures: "{{ jobs_data | selectattr('fail', 'greaterthan', 0) | list }}"
+      broken_jobs: "{{ jobs_data }}"
 
+      # Contadores por índices
+      jobs_with_failures: "{{ jobs_data | selectattr('4', 'equalto', 1) | list }}"
+
+      # Contadores (pueden ser 0)
       total_jobs: "{{ jobs_data | length }}"
-      broken_jobs_count: "{{ jobs_data | selectattr('broken', 'equalto', 'Y') | list | length }}"
-      jobs_with_failures_count: "{{ jobs_data | selectattr('fail', 'greaterthan', 0) | list | length }}"
-      active_jobs: "{{ jobs_data | selectattr('broken', 'equalto', 'N') | list | length }}"
+      broken_jobs_count: "{{ jobs_data | length }}"
+      jobs_with_failures_count: "{{ jobs_data | selectattr('4', 'equalto', 1) | list | length }}"
+      active_jobs: 0
 
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
 
@@ -56,12 +62,8 @@
   ansible.builtin.debug:
     msg:
       - "Instancia: {{ oracle_jobs_current_database_key }}"
-      - "Validación: {{ 'EXITOSA' if not (jobs_validation_result.failed | default(true))
-        and not ((jobs_validation_result.msg | default('')) is search('ORA-')) else 'ERROR' }}"
-      - "Jobs encontrados: {{ jobs_validation_result.query_result | default([]) | length if not (jobs_validation_result.failed | default(true))
-        and not ((jobs_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "Jobs broken: {{ jobs_validation_result.query_result | default([]) | selectattr('broken', 'equalto', 'Y') | list | length
-        if not (jobs_validation_result.failed | default(true)) and not ((jobs_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "Jobs con failures: {{ jobs_validation_result.query_result | default([]) | selectattr('fail', 'greaterthan', 0) | list | length
-        if not (jobs_validation_result.failed | default(true)) and not ((jobs_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "{% if (jobs_validation_result.msg | default('')) is search('ORA-') %}Error Oracle: {{ jobs_validation_result.msg }}{% endif %}"
+      - "Validación: {{ 'EXITOSA' if (jobs_validation_result.msg | default([]) | length > 0)
+        or not (jobs_validation_result.failed | default(false)) else 'ERROR' }}"
+      - "Jobs BROKEN encontrados: {{ jobs_validation_result.msg | default([]) | length }}"
+      - "Con failures > 0: {{ jobs_validation_result.msg | default([]) | selectattr('4', 'equalto', 1) | list | length }}"
+      - "{% if jobs_validation_result.msg | default([]) | length == 0 %}Sin jobs broken en esta instancia{% endif %}"

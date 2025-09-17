@@ -1,7 +1,7 @@
 ---
 # tasks file for roles/oracle_bk
 - name: "Validar backups últimas 12 horas en {{ oracle_bk_current_database_key }}"
-  opitzconsulting.ansible_oracle.oracle_sql:
+  mi_org.oracle.oracle_sql_async:
     hostname: "{{ oracle_bk_current_database.direccion_ip }}"
     port: "{{ oracle_bk_current_database.puerto }}"
     service_name: "{{ oracle_bk_current_database.cadena_tns }}"

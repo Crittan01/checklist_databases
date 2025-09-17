@@ -30,7 +30,7 @@
       | selectattr('no_archivelog_in_12h', 'defined') | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length | int }}"
 
     # JOBS: Manejo seguro de datos vacíos
-    total_broken_jobs: "{{ inventory_report_job_results | default([]) | map(attribute='broken_jobs', default=[]) | flatten | length | int }}"
+    total_broken_jobs: "{{ inventory_report_job_results | default([]) | map(attribute='broken_jobs_count', default='0') | map('int') | sum }}"
     total_jobs_with_failures: "{{ inventory_report_job_results | default([]) | map(attribute='jobs_with_failures', default=[]) | flatten | length | int }}"
 
 - name: "Calcular porcentaje de conectividad"
