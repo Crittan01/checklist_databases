@@ -230,50 +230,33 @@ tr:hover {
     margin: 20px 0;
 }
 
-.row-success {
-    background: rgba(39, 174, 96, 0.05);
+.operational-table {
+    background: #f8f9fa;
 }
 
-.row-warning {
-    background: rgba(243, 156, 18, 0.05);
+.operational-table th {
+    background: var(--dark-color);
 }
 
-.row-danger {
-    background: rgba(231, 76, 60, 0.05);
+.critical-alert {
+    background: rgba(231, 76, 60, 0.15) !important;
+    border-left: 3px solid var(--danger-color);
 }
 
-.section-title {
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 10px;
-    margin: 30px 0 20px 0;
+.warning-alert {
+    background: rgba(243, 156, 18, 0.15) !important;
+    border-left: 3px solid var(--warning-color);
 }
 
 .no-alerts {
-    background: rgba(39, 174, 96, 0.1);
-    border: 1px solid var(--success-color);
-    padding: 20px;
-    border-radius: 8px;
     text-align: center;
+    padding: 40px;
+    background: rgba(39, 174, 96, 0.05);
+    border-radius: 8px;
     margin: 20px 0;
 }
 
-@media (max-width: 768px) {
-    .dashboard {
-        grid-template-columns: 1fr;
-    }
-    
-    .header-info {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
-    }
-    
-    table {
-        font-size: 12px;
-    }
-    
-    th, td {
-        padding: 8px 6px;
-    }
+.no-alerts h3 {
+    color: var(--success-color);
+    margin-bottom: 10px;
 }
