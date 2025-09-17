@@ -149,8 +149,8 @@
         <!-- Fase 2: Información Operacional COMPLETA -->
         <div id="fase2" class="tab-content">
             <h2>Información Operacional Completa</h2>
-            <p><strong>IMPORTANTE</strong> - Información completa para análisis y trazabilidad.</p>
-            <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+            <p><span class="status-warning">IMPORTANTE</span> - Información completa para análisis y trazabilidad.</p>
+            <p><span class="status-warning">NOTA</span> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
 
             <!-- TABLA CONSOLIDADA DE BACKUPS -->
             <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Backups (Últimas 12 horas)</h3>
@@ -297,8 +297,8 @@
         <!-- Fase 3: SOLO Alertas Críticas -->
         <div id="fase3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
-            <p><strong>IMPORTANTE</strong> - Acciones requeridas que ameritan validación administrativa.</p>
-            <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
+            <p><span class="status-warning">IMPORTANTE</span> - Acciones requeridas que ameritan validación administrativa.</p>
+            <p><span class="status-warning">NOTA</span> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
 
             {% if stats.total_alerts | int == 0 %}
             <div class="no-alerts">
