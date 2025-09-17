@@ -8,6 +8,19 @@
     connectivity_results: []
     job_results: []
 
+  pre_tasks:
+    - name: "Validar target_database si está especificada"
+      ansible.builtin.fail:
+        msg: |
+          ERROR: Base de datos '{{ target_database }}' no existe en el inventario.
+          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+          Usa: ansible-playbook playbook_oracle_jobs.yml -e target_database=NOMBRE_VALIDO
+          O ejecuta sin -e para validar todas las bases
+      when:
+        - target_database is defined
+        - target_database != ''
+        - target_database not in oracle_databases.keys()
+
   tasks:
     # Primero verificar conectividad
     - name: "Verificar conectividad {{ item.key }}"
@@ -33,16 +46,20 @@
         oracle_jobs_current_database: "{{ oracle_databases[item.instancia_key] }}"
 
   post_tasks:
-    - name: "Mostrar resultado de jobs"
+    - name: "Verificar que se ejecutó al menos una validación"
+      ansible.builtin.fail:
+        msg: |
+          ADVERTENCIA: No se ejecutaron validaciones.
+          Causa probable: target_database='{{ target_database | default("") }}' no coincide con ninguna base configurada.
+          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+      when: job_results | length == 0
+
+    - name: "Resumen final de jobs"
       ansible.builtin.debug:
         msg:
-          - "=== RESULTADO VALIDACIÓN JOBS ==="
-          - "Instancia: {{ item.instancia_key }}"
-          - "Jobs encontrados: {{ item.jobs_data | length }}"
-          - "Jobs broken: {{ item.broken_jobs | length }}"
-          - "Jobs con failures: {{ item.jobs_with_failures | length }}"
-          - "Estado: {{ 'CRÍTICO' if item.broken_jobs | length > 0 else ('ADVERTENCIA' if item.jobs_with_failures | length > 0 else 'OK') }}"
-      loop: "{{ job_results }}"
-      loop_control:
-        label: "{{ item.instancia_key }}"
-      when: job_results | length > 0
+          - "=== RESUMEN VALIDACIÓN JOBS ==="
+          - "Bases validadas: {{ job_results | length }}"
+          - "Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}"
+          - "Jobs encontrados: {{ job_results | map(attribute='total_jobs') | map('int') | sum }}"
+          - "Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
+          - "Jobs con failures: {{ job_results | map(attribute='jobs_with_failures_count') | map('int') | sum }}"
