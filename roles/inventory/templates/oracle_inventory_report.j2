@@ -275,16 +275,6 @@
         <div class="header">
             <h1>Oracle Database Check Report</h1>
             <div class="header-info">
-                <div>
-                    {% set unique_hosts = connectivity_results | map(attribute='host') | list | unique | list %}
-                    {% if unique_hosts | length == 1 %}
-                        <strong>Servidor BD:</strong> {{ unique_hosts[0] }}
-                    {% elif unique_hosts | length <= 3 %}
-                        <strong>Servidores BD:</strong> {{ unique_hosts | join(', ') }}
-                    {% else %}
-                        <strong>Servidores BD:</strong> {{ unique_hosts | length }} servidores
-                    {% endif %}
-                </div>
                 <div><strong>Ejecutado desde:</strong> {{ hostname }}</div>
                 <div><strong>Fecha:</strong> {{ execution_date }}</div>
                 <div><strong>Hora:</strong> {{ execution_time }}</div>
