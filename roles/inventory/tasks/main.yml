@@ -21,23 +21,24 @@
     failed_connections: "{{ inventory_report_connectivity_results | default([])
       | selectattr('connection_successful', 'equalto', false) | list | length | int }}"
 
-    # BACKUPS: Manejo seguro de datos vacíos
-    total_backup_errors: "{{ inventory_report_backup_results | default([]) | map(attribute='backup_errors', default=[]) | flatten | length | int }}"
+    # BACKUPS: Corrección en cálculos
+    # Contar backup_errors por instancia, no total de elementos en listas
+    total_backup_errors: "{{ inventory_report_backup_results | default([]) | map(attribute='failed_backups', default='0') | map('int') | sum }}"
 
-    # BACKUPS: Manejo seguro de instancias sin ARCHIVELOG
+    # BACKUPS: Instancias sin ARCHIVELOG en 12h
     instances_no_archivelog_12h:
       "{{ inventory_report_backup_results | default([])
       | selectattr('no_archivelog_in_12h', 'defined') | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length | int }}"
 
-    # JOBS: Manejo seguro de datos vacíos
+    # JOBS: Corrección en cálculos
     total_broken_jobs: "{{ inventory_report_job_results | default([]) | map(attribute='broken_jobs_count', default='0') | map('int') | sum }}"
-    total_jobs_with_failures: "{{ inventory_report_job_results | default([]) | map(attribute='jobs_with_failures', default=[]) | flatten | length | int }}"
+    total_jobs_with_failures: "{{ inventory_report_job_results | default([]) | map(attribute='jobs_with_failures_count', default='0') | map('int') | sum }}"
 
 - name: "Calcular porcentaje de conectividad"
   ansible.builtin.set_fact:
     connectivity_percentage: "{{ ((successful_connections | int / total_databases | int * 100) | round | int) if total_databases | int > 0 else 0 }}"
 
-- name: "Calcular total de alertas"
+- name: "Calcular total de alertas CORREGIDO"
   ansible.builtin.set_fact:
     total_backup_alerts: "{{ (total_backup_errors | int) + (instances_no_archivelog_12h | int) }}"
     total_alerts: "{{ (failed_connections | int) + (total_backup_errors | int) + (instances_no_archivelog_12h | int) + (total_broken_jobs | int) }}"
@@ -58,7 +59,7 @@
     backup_results: "{{ local_backup_results }}"
     job_results: "{{ local_job_results }}"
 
-    # Estadísticas calculadas
+    # Estadísticas calculadas CORREGIDAS
     stats:
       total_dbs: "{{ total_databases | int }}"
       successful_conns: "{{ successful_connections | int }}"
@@ -70,6 +71,18 @@
       broken_jobs_count: "{{ total_broken_jobs | int }}"
       jobs_failures_count: "{{ total_jobs_with_failures | int }}"
       total_alerts: "{{ total_alerts | int }}"
+
+- name: "Debug de estadísticas para verificación"
+  ansible.builtin.debug:
+    msg:
+      - "=== DEBUG ESTADÍSTICAS CALCULADAS ==="
+      - "Total DBs: {{ total_databases }}"
+      - "Conectividad fallida: {{ failed_connections }}"
+      - "Backup errors: {{ total_backup_errors }}"
+      - "Sin ARCHIVELOG 12h: {{ instances_no_archivelog_12h }}"
+      - "Jobs broken: {{ total_broken_jobs }}"
+      - "TOTAL BACKUP ALERTS: {{ total_backup_alerts }}"
+      - "TOTAL ALERTS: {{ total_alerts }}"
 
 - name: "Mostrar resumen del reporte generado"
   ansible.builtin.debug:

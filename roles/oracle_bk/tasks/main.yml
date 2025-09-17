@@ -30,12 +30,16 @@
   ansible.builtin.set_fact:
     backup_results: "{{ backup_results + [backup_item] }}"
   vars:
-    # # Detectar errores Oracle por mensaje ORA
-    has_oracle_error: "{{ (backup_validation_result.msg | default('')) is search('ORA-') }}"
+    # CORRECCIÓN: Los datos están en 'msg', no en 'query_result'
+    has_oracle_error: "{{ (backup_validation_result.msg | default('')) is search('ORA-') if backup_validation_result.msg is string else false }}"
     validation_successful: "{{ not (backup_validation_result.failed | default(true)) and not has_oracle_error }}"
-    backup_data: "{{ backup_validation_result.query_result | default([]) if validation_successful else [] }}"
 
-    # Evaluar período completo solo si conexión exitosa
+    # CORRECCIÓN: Usar backup_validation_result.msg
+    backup_data:
+      "{{ backup_validation_result.msg | default([]) if validation_successful
+      and backup_validation_result.msg is iterable and backup_validation_result.msg is not string else [] }}"
+
+    # Evaluar ARCHIVELOG en período de 12h
     archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
     has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"
 
@@ -45,19 +49,21 @@
       host: "{{ oracle_bk_current_database.host }}"
       direccion_ip: "{{ oracle_bk_current_database.direccion_ip }}"
 
-      # Basado en detección de errores Oracle
+      # Estado de validación
       backup_validation_successful: "{{ validation_successful }}"
       backup_validation_error: "{{ backup_validation_result.msg | default('Error desconocido') if not validation_successful else '' }}"
 
-      # TODOS los backups (sin filtrar si conexión exitosa)
+      # DATOS CORREGIDOS - usando backup_data procesado correctamente
       backup_data: "{{ backup_data }}"
 
-      # Solo evalúan si conexión exitosa
+      # Análisis de errores (índice 5 = status)
       backup_errors: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
+
+      # Análisis ARCHIVELOG (índice 4 = input_type)
       no_archivelog_in_12h: "{{ not has_archivelog_in_12h if validation_successful else false }}"
       archivelog_count: "{{ archivelog_backups | length }}"
 
-      # Contadores
+      # Contadores corregidos
       total_backups: "{{ backup_data | length }}"
       failed_backups: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list | length }}"
       successful_backups: "{{ backup_data | selectattr('5', 'ne', 'FAILED') | list | length }}"
@@ -68,15 +74,17 @@
   ansible.builtin.debug:
     msg:
       - "=== RESUMEN BACKUPS {{ oracle_bk_current_database_key }} ==="
-      - "Validación: {{ 'EXITOSA' if not (backup_validation_result.failed | default(true))
-        and not ((backup_validation_result.msg | default('')) is search('ORA-')) else 'ERROR' }}"
-      - "Total backups encontrados: {{ backup_validation_result.query_result | default([]) | length
-        if not (backup_validation_result.failed | default(true)) and not ((backup_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "Con ERROR (FAILED): {{ backup_validation_result.query_result | default([]) | selectattr('5', 'equalto', 'FAILED') | list | length
-        if not (backup_validation_result.failed | default(true)) and not ((backup_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "ARCHIVELOG encontrados: {{ backup_validation_result.query_result | default([]) | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length
-        if not (backup_validation_result.failed | default(true)) and not ((backup_validation_result.msg | default('')) is search('ORA-')) else 0 }}"
-      - "ALERTA PERÍODO: {{ 'SIN ARCHIVELOG EN 12H' if (backup_validation_result.query_result | default([])
-        | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length == 0) and not (backup_validation_result.failed | default(true))
-        and not ((backup_validation_result.msg | default('')) is search('ORA-')) else 'OK' }}"
-      - "{% if (backup_validation_result.msg | default('')) is search('ORA-') %}Error Oracle: {{ backup_validation_result.msg }}{% endif %}"
+      - "Validación: {{ 'EXITOSA' if validation_successful else 'ERROR' }}"
+      - "Total backups encontrados: {{ backup_data | length }}"
+      - "Con ERROR (FAILED): {{ backup_data | selectattr('5', 'equalto', 'FAILED') | list | length }}"
+      - "ARCHIVELOG encontrados: {{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length }}"
+      - "ALERTA PERÍODO: {{ 'SIN ARCHIVELOG EN 12H' if not has_archivelog_in_12h and validation_successful else 'OK' }}"
+      - "{% if not validation_successful %}Error: {{ backup_validation_result.msg }}{% endif %}"
+  vars:
+    has_oracle_error: "{{ (backup_validation_result.msg | default('')) is search('ORA-') if backup_validation_result.msg is string else false }}"
+    validation_successful: "{{ not (backup_validation_result.failed | default(true)) and not has_oracle_error }}"
+    backup_data:
+      "{{ backup_validation_result.msg | default([]) if validation_successful
+      and backup_validation_result.msg is iterable and backup_validation_result.msg is not string else [] }}"
+    archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
+    has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"
