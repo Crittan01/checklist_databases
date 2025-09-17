@@ -8,6 +8,19 @@
     connectivity_results: []
     backup_results: []
 
+  pre_tasks:
+    - name: "Validar target_database si está especificada"
+      ansible.builtin.fail:
+        msg: |
+          ERROR: Base de datos '{{ target_database }}' no existe en el inventario.
+          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+          Usa: ansible-playbook playbook_oracle_backups.yml -e target_database=NOMBRE_VALIDO
+          O ejecuta sin -e para validar todas las bases
+      when:
+        - target_database is defined
+        - target_database != ''
+        - target_database not in oracle_databases.keys()
+
   tasks:
     # Primero verificar conectividad
     - name: "Verificar conectividad {{ item.key }}"
@@ -33,16 +46,20 @@
         oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
 
   post_tasks:
-    - name: "Mostrar resultado de backups"
+    - name: "Verificar que se ejecutó al menos una validación"
+      ansible.builtin.fail:
+        msg: |
+          ADVERTENCIA: No se ejecutaron validaciones.
+          Causa probable: target_database='{{ target_database | default("") }}' no coincide con ninguna base configurada.
+          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+      when: backup_results | length == 0
+
+    - name: "Resumen final de backups"
       ansible.builtin.debug:
         msg:
-          - "=== RESULTADO VALIDACIÓN BACKUPS ==="
-          - "Instancia: {{ item.instancia_key }}"
-          - "Backups encontrados: {{ item.backup_data | length }}"
-          - "Backups fallidos: {{ item.backup_errors | length }}"
-          - "Sin ARCHIVELOG 12h: {{ item.no_archivelog_in_12h | default(false) }}"
-          - "Estado: {{ 'CRÍTICO' if item.backup_errors | length > 0 else ('ADVERTENCIA' if item.no_archivelog_in_12h | default(false) else 'OK') }}"
-      loop: "{{ backup_results }}"
-      loop_control:
-        label: "{{ item.instancia_key }}"
-      when: backup_results | length > 0
+          - "=== RESUMEN VALIDACIÓN BACKUPS ==="
+          - "Bases validadas: {{ backup_results | length }}"
+          - "Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}"
+          - "Total backups: {{ backup_results | map(attribute='total_backups') | map('int') | sum }}"
+          - "Backups fallidos: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+          - "Bases sin ARCHIVELOG 12h: {{ backup_results | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length }}"
