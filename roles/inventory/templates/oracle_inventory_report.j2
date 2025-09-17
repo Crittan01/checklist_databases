@@ -55,7 +55,7 @@
                 <table style="margin: 10px 0; box-shadow: none;">
                     <thead>
                         <tr style="background: var(--light-color); font-weight: 600;">
-                            <td><strong>OBJETO</strong></td>
+                            <td><strong>DOMINIO</strong></td>
                             <td><strong>ALERTAS</strong></td>
                             <td><strong>ESTADO</strong></td>
                         </tr>
@@ -93,13 +93,13 @@
         
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-button active" onclick="openTab('frente1')">Frente 1: Conectividad</button>
-            <button class="tab-button" onclick="openTab('frente2')">Frente 2: Información Operacional</button>
-            <button class="tab-button" onclick="openTab('frente3')">Frente 3: Alertas Críticas</button>
+            <button class="tab-button active" onclick="openTab('fase1')">Fase 1: Conectividad</button>
+            <button class="tab-button" onclick="openTab('fase2')">Fase 2: Información Operacional</button>
+            <button class="tab-button" onclick="openTab('fase3')">Fase 3: Alertas Críticas</button>
         </div>
         
-        <!-- Frente 1: Conectividad -->
-        <div id="frente1" class="tab-content active">
+        <!-- Fase 1: Conectividad -->
+        <div id="fase1" class="tab-content active">
             <h2>Conectividad Oracle</h2>
             <p>Estado de conexiones a todas las bases de datos del inventario.</p>
             
@@ -146,8 +146,8 @@
             </table>
         </div>
         
-        <!-- Frente 2: Información Operacional COMPLETA -->
-        <div id="frente2" class="tab-content">
+        <!-- Fase 2: Información Operacional COMPLETA -->
+        <div id="fase2" class="tab-content">
             <h2>Información Operacional Completa</h2>
             <p><strong>IMPORTANTE</strong> - Información completa para análisis y trazabilidad.</p>
             <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>
@@ -294,8 +294,8 @@
             {% endif %}
         </div>
         
-        <!-- Frente 3: SOLO Alertas Críticas -->
-        <div id="frente3" class="tab-content">
+        <!-- Fase 3: SOLO Alertas Críticas -->
+        <div id="fase3" class="tab-content">
             <h2>Alertas Críticas - Requieren Atención</h2>
             <p><strong>IMPORTANTE</strong> - Acciones requeridas que ameritan validación administrativa.</p>
             <p><strong>NOTA</strong> - Solo se relaciona analisis de validacion donde SI hubo conectividad.</p>

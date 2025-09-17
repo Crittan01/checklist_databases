@@ -21,8 +21,8 @@
           - "Validaciones: Conectividad + Backups + Jobs"
 
   tasks:
-    # FRENTE 1: CONECTIVIDAD
-    - name: "FRENTE 1: Validar conectividad {{ item.key }}"
+    # FASE 1: CONECTIVIDAD
+    - name: "FASE 1: Validar conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
       vars:
@@ -32,8 +32,8 @@
       loop_control:
         label: "{{ item.key }}"
 
-    # FRENTE 2: BACKUPS (Solo DBs conectadas)
-    - name: "FRENTE 2: Validar backups {{ item.instancia_key }}"
+    # FASE 2: BACKUPS (Solo DBs conectadas)
+    - name: "FASE 2: Validar backups {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_bk
       vars:
@@ -43,8 +43,8 @@
       loop_control:
         label: "{{ item.instancia_key }}"
 
-    # FRENTE 3: JOBS (Solo DBs conectadas)
-    - name: "FRENTE 3: Validar jobs {{ item.instancia_key }}"
+    # FASE 3: JOBS (Solo DBs conectadas)
+    - name: "FASE 3: Validar jobs {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_jobs
       vars:
