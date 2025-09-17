@@ -1,0 +1,34 @@
+---
+# Resumen de conectividad - CENTRALIZADO
+- name: "Verificar ejecución de validaciones"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de conectividad.
+
+      Posibles causas:
+      - target_database no coincide con bases configuradas
+      - Error en configuración de oracle_databases
+
+      Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+  when: connectivity_results | length == 0
+
+- name: "Resumen ejecutivo de conectividad"
+  ansible.builtin.debug:
+    msg:
+      - "=== CONECTIVIDAD ORACLE ==="
+      - "Bases validadas: {{ connectivity_results | length }}"
+      - "Exitosas: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}"
+      - "Con errores: {{ connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length }}"
+      - "Porcentaje éxito: {{ ((connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length
+        / connectivity_results | length) * 100) | round(1) if connectivity_results | length > 0 else 0 }}%"
+
+- name: "Detalle de errores de conectividad"
+  ansible.builtin.debug:
+    msg:
+      - "Base: {{ item.instancia_key }}"
+      - "Error: {{ item.connection_error }}"
+      - "Host: {{ item.direccion_ip }}:{{ item.puerto }}"
+  loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', false) | list }}"
+  loop_control:
+    label: "{{ item.instancia_key }}"
+  when: connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length > 0

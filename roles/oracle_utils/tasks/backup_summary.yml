@@ -1,0 +1,18 @@
+---
+# Resumen de backups - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de backup"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de backup.
+      Verifique conectividad o configuración de bases de datos.
+  when: backup_results | length == 0
+
+- name: "Resumen ejecutivo de backups"
+  ansible.builtin.debug:
+    msg:
+      - "=== BACKUPS ORACLE ==="
+      - "Bases validadas: {{ backup_results | length }}"
+      - "Total backups: {{ backup_results | map(attribute='total_backups') | map('int') | sum }}"
+      - "Backups fallidos: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+      - "Bases sin ARCHIVELOG 12h: {{ backup_results | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length }}"
+      - "Estado general: {{ 'CRÍTICO' if backup_results | map(attribute='failed_backups') | map('int') | sum > 0 else 'OK' }}"

@@ -76,9 +76,9 @@
                             <td><strong>Backups</strong></td>
                             {% if stats.successful_conns | int == 0 %}
                                 <td>No evaluado</td>
-                                <td><span class="status-info">NO EVALUADO</span></td>
+                                <td><span class="status-warning">NO EVALUADO</span></td>
                             {% else %}
-                                <td>{{ stats.total_backup_alerts }} alertas</td>
+                                <td>{{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }} alertas</td>
                                 <td>
                                     {% if stats.backup_errors_count | int > 0 %}
                                         <span class="status-danger">CRÍTICO</span>
@@ -94,7 +94,7 @@
                             <td><strong>Jobs</strong></td>
                             {% if stats.successful_conns | int == 0 %}
                                 <td>No evaluado</td>
-                                <td><span class="status-info">NO EVALUADO</span></td>
+                                <td><span class="status-warning">NO EVALUADO</span></td>
                             {% else %}
                                 <td>{{ stats.broken_jobs_count }} jobs broken</td>
                                 <td>
@@ -132,6 +132,9 @@
                         <th>TNS</th>
                         <th>Usuario</th>
                         <th>Estado</th>
+<!--                     
+                        <th>Información BD</th>
+-->
                         <th>Timestamp</th>
                     </tr>
                 </thead>
@@ -150,11 +153,26 @@
                                 <span class="status-danger">ERROR</span>
                             {% endif %}
                         </td>
+<!--
+                        <td>
+                            {% if conn.connection_successful and conn.database_info %}
+                                <strong>BD:</strong> {{ conn.database_info.database_name | default('N/A') }}<br>
+                                <strong>Instancia:</strong> {{ conn.database_info.instance_name | default('N/A') }}<br>
+                                <strong>Host BD:</strong> {{ conn.database_info.server_host | default('N/A') }}<br>
+                                <strong>Versión:</strong> {{ conn.database_info.database_version | default('N/A') }}<br>
+                                <strong>Estado:</strong> {{ conn.database_info.instance_status | default('N/A') }}<br>
+                                <strong>Rol:</strong> {{ conn.database_info.database_role | default('N/A') }}<br>
+                                <strong>Modo:</strong> {{ conn.database_info.open_mode | default('N/A') }}
+                            {% else %}
+                                <span style="color: var(--danger-color);">No disponible</span>
+                            {% endif %}
+                        </td>
+-->
                         <td>{{ conn.test_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
                     {% if not conn.connection_successful and conn.connection_error %}
                     <tr class="critical-alert">
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="error-details">
                                 <strong>Error:</strong> {{ conn.connection_error }}
                             </div>
@@ -285,14 +303,14 @@
             <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: Backups (Últimas 12 horas)</h3>
             <div class="summary-stats">
                 <p><strong>Criterio de Evaluación:</strong> Backups de últimas 12 horas con análisis de alertas</p>
-                {% if backup_results is defined %}
+                {% if backup_results | length > 0 %}
                 {% set global_backups = backup_results | map(attribute='total_backups') | map('int') | sum %}
                 {% set global_failed = backup_results | map(attribute='failed_backups') | map('int') | sum %}
                 <p><strong>Resumen Global:</strong> Total backups: {{ global_backups }} | Fallidos: {{ global_failed }} | Sin ARCHIVELOG: {{ stats.instances_no_archivelog_count }}</p>
                 {% endif %}
             </div>
             
-            {% if backup_results is defined and backup_results | length > 0 %}
+            {% if backup_results | length > 0 %}
             <table class="operational-table">
                 <thead>
                     <tr>
@@ -328,6 +346,15 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% if not backup.backup_validation_successful %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="error-details">
+                                <strong>Error:</strong> {{ backup.backup_validation_error }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -420,7 +447,7 @@
             {% endif %}
 
             <!-- ALERTAS DE BACKUPS FALLIDOS -->
-            {% if stats.backup_errors_count is defined and stats.backup_errors_count | int > 0 %}
+            {% if stats.backup_errors_count | int > 0 %}
             <div class="alert-section">
                 <h3 style="color: var(--danger-color);">CRÍTICO: Backups Fallidos ({{ stats.backup_errors_count }})</h3>
                 <p><strong>Acción requerida:</strong> Investigar y corregir fallos de backup inmediatamente.</p>
@@ -452,7 +479,7 @@
             {% endif %}
 
             <!-- ALERTAS DE ADVERTENCIA: ARCHIVELOG -->
-            {% if stats.instances_no_archivelog_count is defined and stats.instances_no_archivelog_count | int > 0 %}
+            {% if stats.instances_no_archivelog_count | int > 0 %}
             <div class="warning-section">
                 <h3 style="color: var(--warning-color);">ADVERTENCIA: Sin ARCHIVELOG en 12h ({{ stats.instances_no_archivelog_count }})</h3>
                 <p><strong>Acción requerida:</strong> Verificar estrategia de backup y política de ARCHIVELOG.</p>
@@ -466,7 +493,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% if backup_results is defined %}
                         {% for backup in backup_results %}
                         {% if backup.no_archivelog_in_12h %}
                         <tr class="warning-alert">
@@ -477,7 +503,6 @@
                         </tr>
                         {% endif %}
                         {% endfor %}
-                        {% endif %}
                     </tbody>
                 </table>
             </div>

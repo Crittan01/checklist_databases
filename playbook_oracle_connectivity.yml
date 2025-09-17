@@ -1,5 +1,5 @@
 ---
-# Playbook modular - Solo Conectividad Oracle
+# Playbook modular - Solo Conectividad Oracle - OPTIMIZADO
 - name: Oracle Database Connectivity Only
   hosts: localhost
   connection: local
@@ -7,45 +7,27 @@
   vars:
     connectivity_results: []
 
-  pre_tasks:
-    - name: "Validar target_database si está especificada"
-      ansible.builtin.fail:
-        msg: |
-          ERROR: Base de datos '{{ target_database }}' no existe en el inventario.
-          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
-          Usa: ansible-playbook playbook_oracle_connectivity.yml -e target_database=NOMBRE_VALIDO
-          O ejecuta sin -e para validar todas las bases
-      when:
-        - target_database is defined
-        - target_database != ''
-        - target_database not in oracle_databases.keys()
-
   tasks:
+    # Usar lógica común de validación
+    - name: "Validar parámetros de entrada"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: validate_target_database.yml
+
     - name: "Validar conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
+        tasks_from: quick_check.yml
       vars:
-        oracle_conn_current_database_key: "{{ item.key }}"
-        oracle_conn_current_database: "{{ item.value }}"
+        current_database_key: "{{ item.key }}"
+        current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
       when: target_database is not defined or target_database == '' or item.key == target_database
 
-  post_tasks:
-    - name: "Verificar que se ejecutó al menos una validación"
-      ansible.builtin.fail:
-        msg: |
-          ADVERTENCIA: No se ejecutaron validaciones.
-          Causa probable: target_database='{{ target_database | default("") }}' no coincide con ninguna base configurada.
-          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
-      when: connectivity_results | length == 0
-
-    - name: "Resumen final de conectividad"
-      ansible.builtin.debug:
-        msg:
-          - "=== RESUMEN CONECTIVIDAD ==="
-          - "Bases validadas: {{ connectivity_results | length }}"
-          - "Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}"
-          - "Conectadas: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}"
-          - "Con errores: {{ connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length }}"
+    # Post-tasks consolidado
+    - name: "Resumen de conectividad"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: connectivity_summary.yml

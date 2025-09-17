@@ -1,5 +1,5 @@
 ---
-# Playbook modular - Solo Validación de Backups
+# Playbook modular - Solo Validación de Backups - OPTIMIZADO
 - name: Oracle Database Backups Validation Only
   hosts: localhost
   connection: local
@@ -8,58 +8,39 @@
     connectivity_results: []
     backup_results: []
 
-  pre_tasks:
-    - name: "Validar target_database si está especificada"
-      ansible.builtin.fail:
-        msg: |
-          ERROR: Base de datos '{{ target_database }}' no existe en el inventario.
-          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
-          Usa: ansible-playbook playbook_oracle_backups.yml -e target_database=NOMBRE_VALIDO
-          O ejecuta sin -e para validar todas las bases
-      when:
-        - target_database is defined
-        - target_database != ''
-        - target_database not in oracle_databases.keys()
-
   tasks:
-    # Primero verificar conectividad
-    - name: "Verificar conectividad {{ item.key }}"
+    # Validación común
+    - name: "Validar parámetros"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: validate_target_database.yml
+
+    # Conectividad ligera (solo verificación básica)
+    - name: "Verificar acceso {{ item.key }}"
+      ansible.builtin.include_role:
+        name: oracle_conn
+        tasks_from: quick_check.yml
+      vars:
+        current_database_key: "{{ item.key }}"
+        current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
-      ansible.builtin.include_role:
-        name: oracle_conn
-      vars:
-        oracle_conn_current_database_key: "{{ item.key }}"
-        oracle_conn_current_database: "{{ item.value }}"
       when: target_database is not defined or target_database == '' or item.key == target_database
 
-    # Validar backups solo en DBs conectadas
+    # Validación de backups
     - name: "Validar backups {{ item.instancia_key }}"
-      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
-      loop_control:
-        label: "{{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_bk
       vars:
-        oracle_bk_current_database_key: "{{ item.instancia_key }}"
-        oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
+      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
 
-  post_tasks:
-    - name: "Verificar que se ejecutó al menos una validación"
-      ansible.builtin.fail:
-        msg: |
-          ADVERTENCIA: No se ejecutaron validaciones.
-          Causa probable: target_database='{{ target_database | default("") }}' no coincide con ninguna base configurada.
-          Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
-      when: backup_results | length == 0
-
-    - name: "Resumen final de backups"
-      ansible.builtin.debug:
-        msg:
-          - "=== RESUMEN VALIDACIÓN BACKUPS ==="
-          - "Bases validadas: {{ backup_results | length }}"
-          - "Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}"
-          - "Total backups: {{ backup_results | map(attribute='total_backups') | map('int') | sum }}"
-          - "Backups fallidos: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
-          - "Bases sin ARCHIVELOG 12h: {{ backup_results | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length }}"
+    # Resumen consolidado
+    - name: "Resumen de backups"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: backup_summary.yml

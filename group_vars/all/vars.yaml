@@ -1,6 +1,12 @@
 ---
-# Configuración global Oracle
+# Configuración global Oracle - Consolidada
 oracle_timeout: 60
+
+# Configuración común para validaciones
+oracle_common:
+  error_patterns: ["ORA-", "TNS-", "Error"]
+  validation_timeout: 60
+  connection_retry: 1
 
 # Inventario simplificado de bases de datos
 oracle_databases:

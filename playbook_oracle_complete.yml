@@ -1,5 +1,5 @@
 ---
-# Playbook para AAP - Checklist Oracle Completo
+# Playbook para AAP - Checklist Oracle Completo - OPTIMIZADO
 - name: Oracle Database Complete Inventory and Validations
   hosts: localhost
   connection: local
@@ -8,71 +8,66 @@
     connectivity_results: []
     backup_results: []
     job_results: []
-    execution_timestamp: "{{ ansible_date_time.iso8601 }}"
-    report_date: "{{ ansible_date_time.date }}"
 
   pre_tasks:
     - name: "Mostrar inicio del checklist completo"
       ansible.builtin.debug:
         msg:
           - "=== CHECKLIST ORACLE COMPLETO ==="
-          - "Bases de datos configuradas: {{ oracle_databases.keys() | list }}"
-          - "Total de instancias: {{ oracle_databases.keys() | list | length }}"
-          - "Validaciones: Conectividad + Backups + Jobs"
+          - "Bases configuradas: {{ oracle_databases.keys() | list | join(', ') }}"
+          - "Total: {{ oracle_databases.keys() | list | length }} instancias"
 
   tasks:
-    # FASE 1: CONECTIVIDAD
-    - name: "FASE 1: Validar conectividad {{ item.key }}"
+    # FASE 1: CONECTIVIDAD (Estandarizada)
+    - name: "FASE 1: Conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
       vars:
-        oracle_conn_current_database_key: "{{ item.key }}"
-        oracle_conn_current_database: "{{ item.value }}"
+        current_database_key: "{{ item.key }}"
+        current_database: "{{ item.value }}"
       loop: "{{ oracle_databases | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
 
-    # FASE 2: BACKUPS (Solo DBs conectadas)
-    - name: "FASE 2: Validar backups {{ item.instancia_key }}"
+    # FASE 2: BACKUPS (Estandarizada)
+    - name: "FASE 2: Backups {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_bk
       vars:
-        oracle_bk_current_database_key: "{{ item.instancia_key }}"
-        oracle_bk_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
       loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
       loop_control:
         label: "{{ item.instancia_key }}"
 
-    # FASE 3: JOBS (Solo DBs conectadas)
-    - name: "FASE 3: Validar jobs {{ item.instancia_key }}"
+    # FASE 3: JOBS (Estandarizada)
+    - name: "FASE 3: Jobs {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_jobs
       vars:
-        oracle_jobs_current_database_key: "{{ item.instancia_key }}"
-        oracle_jobs_current_database: "{{ oracle_databases[item.instancia_key] }}"
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
       loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
       loop_control:
         label: "{{ item.instancia_key }}"
 
-    # GENERAR REPORTE HTML COMPLETO
+    # GENERAR REPORTE (Simplificado)
     - name: "Generar reporte HTML completo"
       ansible.builtin.include_role:
         name: inventory
       vars:
-        inventory_report_connectivity_results: "{{ connectivity_results }}"
-        inventory_report_backup_results: "{{ backup_results }}"
-        inventory_report_job_results: "{{ job_results }}"
-        inventory_report_oracle_databases: "{{ oracle_databases }}"
+        report_connectivity_results: "{{ connectivity_results }}"
+        report_backup_results: "{{ backup_results }}"
+        report_job_results: "{{ job_results }}"
+        report_oracle_databases: "{{ oracle_databases }}"
 
   post_tasks:
-    - name: "Resumen final del checklist completo"
+    - name: "Resumen ejecutivo"
       ansible.builtin.debug:
         msg:
-          - "=== RESUMEN CHECKLIST COMPLETO ==="
-          - "Bases de datos probadas: {{ connectivity_results | length }}"
-          - "Conexiones exitosas: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}"
-          - "Conexiones fallidas: {{ connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length }}"
-          - "Backups validados: {{ backup_results | length }}"
-          - "Backups con error: {{ backup_results | map(attribute='backup_errors') | flatten | length }}"
-          - "Jobs validados: {{ job_results | length }}"
-          - "Jobs broken: {{ job_results | map(attribute='broken_jobs') | flatten | length }}"
+          - "=== RESUMEN EJECUTIVO ==="
+          - "Conectividad: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}
+            /{{ connectivity_results | length }}"
+          - "Backups con error: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+          - "Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
+          - "Reporte: reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"

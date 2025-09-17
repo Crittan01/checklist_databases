@@ -1,90 +1,83 @@
 ---
-# tasks file for roles/oracle_bk
-- name: "Validar backups últimas 12 horas en {{ oracle_bk_current_database_key }}"
+# Validación de backups - SIMPLIFICADA
+- name: "Backups últimas 12h {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
-    hostname: "{{ oracle_bk_current_database.direccion_ip }}"
-    port: "{{ oracle_bk_current_database.puerto }}"
-    service_name: "{{ oracle_bk_current_database.cadena_tns }}"
-    username: "{{ oracle_bk_current_database.usuario }}"
-    password: "{{ oracle_bk_current_database.password }}"
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
     sql: |
       SELECT
-        vi.host_name as HOST,
-        vi.instance_name as INSTANCE,
+        vi.host_name,
+        vi.instance_name,
         TO_CHAR(rbd.start_time,'MM-DD-YYYY HH24:MI:SS') as start_time,
         TO_CHAR(rbd.end_time,'MM-DD-YYYY HH24:MI:SS') as end_time,
         rbd.input_type,
         rbd.status,
         (rbd.end_time-rbd.start_time)*24*60 as min_duration,
-        rbd.output_bytes_display as TAMANO,
+        rbd.output_bytes_display,
         rbd.output_device_type
       FROM v$rman_backup_job_details rbd, v$instance vi
       WHERE rbd.start_time > sysdate - 0.5
       ORDER BY rbd.start_time
     mode: normal
-  register: backup_validation_result
+  register: backup_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Procesar resultados de backups {{ oracle_bk_current_database_key }}"
+- name: "Procesar backups {{ current_database_key }}"
   ansible.builtin.set_fact:
     backup_results: "{{ backup_results + [backup_item] }}"
   vars:
-    # CORRECCIÓN: Los datos están en 'msg', no en 'query_result'
-    has_oracle_error: "{{ (backup_validation_result.msg | default('')) is search('ORA-') if backup_validation_result.msg is string else false }}"
-    validation_successful: "{{ not (backup_validation_result.failed | default(true)) and not has_oracle_error }}"
+    # Detección de errores usando regex nativo
+    msg_string: "{{ backup_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ backup_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
 
-    # CORRECCIÓN: Usar backup_validation_result.msg
-    backup_data:
-      "{{ backup_validation_result.msg | default([]) if validation_successful
-      and backup_validation_result.msg is iterable and backup_validation_result.msg is not string else [] }}"
+    # Datos solo si es exitoso
+    backup_data: "{{ backup_result.msg | default([]) if is_successful and backup_result.msg is iterable and backup_result.msg is not string else [] }}"
 
-    # Evaluar ARCHIVELOG en período de 12h
+    # Análisis usando índices (manteniendo compatibilidad)
+    failed_backups_list: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
     archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
-    has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"
 
     backup_item:
-      instancia_key: "{{ oracle_bk_current_database_key }}"
-      instancia: "{{ oracle_bk_current_database.instancia }}"
-      host: "{{ oracle_bk_current_database.host }}"
-      direccion_ip: "{{ oracle_bk_current_database.direccion_ip }}"
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
 
       # Estado de validación
-      backup_validation_successful: "{{ validation_successful }}"
-      backup_validation_error: "{{ backup_validation_result.msg | default('Error desconocido') if not validation_successful else '' }}"
+      backup_validation_successful: "{{ is_successful }}"
+      backup_validation_error: "{{ backup_result.msg | default('') if not is_successful else '' }}"
 
-      # DATOS CORREGIDOS - usando backup_data procesado correctamente
+      # Datos y análisis
       backup_data: "{{ backup_data }}"
+      backup_errors: "{{ failed_backups_list }}"
 
-      # Análisis de errores (índice 5 = status)
-      backup_errors: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
-
-      # Análisis ARCHIVELOG (índice 4 = input_type)
-      no_archivelog_in_12h: "{{ not has_archivelog_in_12h if validation_successful else false }}"
+      # Alertas específicas
+      no_archivelog_in_12h: "{{ archivelog_backups | length == 0 if is_successful else false }}"
       archivelog_count: "{{ archivelog_backups | length }}"
 
-      # Contadores corregidos
+      # Contadores simplificados
       total_backups: "{{ backup_data | length }}"
-      failed_backups: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list | length }}"
-      successful_backups: "{{ backup_data | selectattr('5', 'ne', 'FAILED') | list | length }}"
+      failed_backups: "{{ failed_backups_list | length }}"
+      successful_backups: "{{ (backup_data | length) - (failed_backups_list | length) }}"
 
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
 
-- name: "Resumen de backups {{ oracle_bk_current_database_key }}"
+- name: "Resumen {{ current_database_key }}"
   ansible.builtin.debug:
     msg:
-      - "=== RESUMEN BACKUPS {{ oracle_bk_current_database_key }} ==="
-      - "Validación: {{ 'EXITOSA' if validation_successful else 'ERROR' }}"
-      - "Total backups encontrados: {{ backup_data | length }}"
-      - "Con ERROR (FAILED): {{ backup_data | selectattr('5', 'equalto', 'FAILED') | list | length }}"
-      - "ARCHIVELOG encontrados: {{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list | length }}"
-      - "ALERTA PERÍODO: {{ 'SIN ARCHIVELOG EN 12H' if not has_archivelog_in_12h and validation_successful else 'OK' }}"
-      - "{% if not validation_successful %}Error: {{ backup_validation_result.msg }}{% endif %}"
+      - "{{ current_database_key }}: {{ backup_data | length }} backups,
+        {{ failed_backups_list | length }} errores, ARCHIVELOG: {{ 'OK' if archivelog_backups | length > 0 else 'FALTA' }}"
   vars:
-    has_oracle_error: "{{ (backup_validation_result.msg | default('')) is search('ORA-') if backup_validation_result.msg is string else false }}"
-    validation_successful: "{{ not (backup_validation_result.failed | default(true)) and not has_oracle_error }}"
-    backup_data:
-      "{{ backup_validation_result.msg | default([]) if validation_successful
-      and backup_validation_result.msg is iterable and backup_validation_result.msg is not string else [] }}"
+    msg_string: "{{ backup_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ backup_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    backup_data: "{{ backup_result.msg | default([]) if is_successful and backup_result.msg is iterable and backup_result.msg is not string else [] }}"
+    failed_backups_list: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
     archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
-    has_archivelog_in_12h: "{{ archivelog_backups | length > 0 }}"

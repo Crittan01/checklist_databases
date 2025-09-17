@@ -1,0 +1,25 @@
+---
+# Validación común de target_database - CENTRALIZADA
+- name: "Validar target_database si está especificada"
+  ansible.builtin.fail:
+    msg: |
+      ERROR: Base de datos '{{ target_database }}' no existe en el inventario.
+
+      Bases disponibles: {{ oracle_databases.keys() | list | join(', ') }}
+
+      Opciones:
+      1. Sin parámetro: ansible-playbook [PLAYBOOK]
+      2. Base específica: ansible-playbook [PLAYBOOK] -e target_database=NOMBRE_VALIDO
+
+      Ejemplo: ansible-playbook [PLAYBOOK] -e target_database=dbMayus1
+  when:
+    - target_database is defined
+    - target_database != ''
+    - target_database not in oracle_databases.keys()
+
+- name: "Confirmar configuración de ejecución"
+  ansible.builtin.debug:
+    msg:
+      - "Modo: {{ 'Base específica' if target_database is defined and target_database != '' else 'Todas las bases' }}"
+      - "{{ 'Target: ' + target_database if target_database is defined and target_database != ''
+        else 'Bases: ' + (oracle_databases.keys() | list | join(', ')) }}"

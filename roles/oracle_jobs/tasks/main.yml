@@ -1,69 +1,77 @@
 ---
-# tasks file for roles/oracle_jobs - CORREGIDO
-- name: "Validar jobs Oracle en {{ oracle_jobs_current_database_key }}"
+# Validación de jobs - SIMPLIFICADA
+- name: "Jobs broken {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
-    hostname: "{{ oracle_jobs_current_database.direccion_ip }}"
-    port: "{{ oracle_jobs_current_database.puerto }}"
-    service_name: "{{ oracle_jobs_current_database.cadena_tns }}"
-    username: "{{ oracle_jobs_current_database.usuario }}"
-    password: "{{ oracle_jobs_current_database.password }}"
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
     sql: |
       SELECT
-        (SELECT host_name FROM v$instance) as HOST_NAME,
-        (SELECT instance_name FROM v$instance) as INSTANCIA,
+        (SELECT host_name FROM v$instance),
+        (SELECT instance_name FROM v$instance),
         JOB,
         SCHEMA_USER,
-        FAILURES as FAIL,
+        FAILURES,
         BROKEN,
-        to_char(LAST_DATE, 'DD-MON-YYYY HH24:MI:SS') as LAST_DATE,
-        REPLACE(TRANSLATE(WHAT,chr(10)||chr(13), '  '), '"', '''') as WHAT
+        to_char(LAST_DATE, 'DD-MON-YYYY HH24:MI:SS'),
+        REPLACE(TRANSLATE(WHAT,chr(10)||chr(13), '  '), '"', '''')
       FROM DBA_JOBS
       WHERE BROKEN='Y'
       ORDER BY SCHEMA_USER, JOB
     mode: normal
-  register: jobs_validation_result
+  register: jobs_result
   failed_when: false
   timeout: "{{ oracle_timeout }}"
 
-- name: "Procesar resultados de jobs {{ oracle_jobs_current_database_key }}"
+- name: "Procesar jobs {{ current_database_key }}"
   ansible.builtin.set_fact:
     job_results: "{{ job_results + [job_item] }}"
   vars:
-    # Datos de jobs (puede ser vacío si no hay jobs broken)
-    jobs_data: "{{ jobs_validation_result.msg | default([]) if jobs_validation_result.msg is iterable and jobs_validation_result.msg is not string else [] }}"
+    # Detección de errores usando regex nativo
+    msg_string: "{{ jobs_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ jobs_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+
+    # Datos solo si es exitoso
+    jobs_data: "{{ jobs_result.msg | default([]) if is_successful and jobs_result.msg is iterable and jobs_result.msg is not string else [] }}"
+
+    # Análisis de jobs con failures (índice 4 = FAILURES)
+    jobs_with_failures_list: "{{ jobs_data | selectattr('4', 'greaterthan', 0) | list }}"
 
     job_item:
-      instancia_key: "{{ oracle_jobs_current_database_key }}"
-      instancia: "{{ oracle_jobs_current_database.instancia }}"
-      host: "{{ oracle_jobs_current_database.host }}"
-      direccion_ip: "{{ oracle_jobs_current_database.direccion_ip }}"
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
 
-      # CORRECCIÓN: Una query exitosa sin errores Oracle es siempre EXITOSA,
-      # independientemente de si retorna datos o no
-      jobs_validation_successful: "{{ not (jobs_validation_result.failed | default(false)) }}"
-      jobs_validation_error: "{{ jobs_validation_result.msg if jobs_validation_result.failed | default(false) else '' }}"
+      # Estado de validación
+      jobs_validation_successful: "{{ is_successful }}"
+      jobs_validation_error: "{{ jobs_result.msg | default('') if not is_successful else '' }}"
 
-      # Datos (puede ser lista vacía)
+      # Datos y análisis
       jobs_data: "{{ jobs_data }}"
-      broken_jobs: "{{ jobs_data }}"
+      broken_jobs: "{{ jobs_data }}" # Todos son broken porque el WHERE filtra
+      jobs_with_failures: "{{ jobs_with_failures_list }}"
 
-      # Contadores por índices
-      jobs_with_failures: "{{ jobs_data | selectattr('4', 'equalto', 1) | list }}"
-
-      # Contadores (pueden ser 0)
+      # Contadores simplificados
       total_jobs: "{{ jobs_data | length }}"
       broken_jobs_count: "{{ jobs_data | length }}"
-      jobs_with_failures_count: "{{ jobs_data | selectattr('4', 'equalto', 1) | list | length }}"
-      active_jobs: 0
+      jobs_with_failures_count: "{{ jobs_with_failures_list | length }}"
+      active_jobs: 0, # No aplica porque solo consultamos broken
 
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
 
-- name: "Mostrar resumen de jobs {{ oracle_jobs_current_database_key }}"
+- name: "Resumen {{ current_database_key }}"
   ansible.builtin.debug:
     msg:
-      - "Instancia: {{ oracle_jobs_current_database_key }}"
-      - "Validación: {{ 'EXITOSA' if (jobs_validation_result.msg | default([]) | length > 0)
-        or not (jobs_validation_result.failed | default(false)) else 'ERROR' }}"
-      - "Jobs BROKEN encontrados: {{ jobs_validation_result.msg | default([]) | length }}"
-      - "Con failures > 0: {{ jobs_validation_result.msg | default([]) | selectattr('4', 'equalto', 1) | list | length }}"
-      - "{% if jobs_validation_result.msg | default([]) | length == 0 %}Sin jobs broken en esta instancia{% endif %}"
+      - "{{ current_database_key }}: {{ jobs_data | length }} jobs broken, {{ jobs_with_failures_list | length }} con failures"
+  vars:
+    msg_string: "{{ jobs_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ jobs_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    jobs_data: "{{ jobs_result.msg | default([]) if is_successful and jobs_result.msg is iterable and jobs_result.msg is not string else [] }}"
+    jobs_with_failures_list: "{{ jobs_data | selectattr('4', 'greaterthan', 0) | list }}"

@@ -1,0 +1,17 @@
+---
+# Resumen de jobs - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de jobs"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de jobs.
+      Verifique conectividad o configuración de bases de datos.
+  when: job_results | length == 0
+
+- name: "Resumen ejecutivo de jobs"
+  ansible.builtin.debug:
+    msg:
+      - "=== JOBS ORACLE ==="
+      - "Bases validadas: {{ job_results | length }}"
+      - "Jobs broken encontrados: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
+      - "Jobs con failures: {{ job_results | map(attribute='jobs_with_failures_count') | map('int') | sum }}"
+      - "Estado general: {{ 'CRÍTICO' if job_results | map(attribute='broken_jobs_count') | map('int') | sum > 0 else 'OK' }}"
