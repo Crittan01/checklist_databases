@@ -189,21 +189,26 @@
             <h2>Información Operacional Completa</h2>
             <p><span class="status-warning">IMPORTANTE</span> - Solo se evalúan instancias con conectividad exitosa.</p>
 
-            <!-- ESTADO DE JOBS ORACLE CON DESPLEGABLE SIMPLE -->
-            <h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
+            <!-- ESTADO DE JOBS ORACLE CON DESPLEGABLE SIMPLE --><h3 style="color: var(--primary-color); margin-top: 30px;">ESTADO: Jobs Oracle</h3>
             <div class="summary-stats">
-                <p><strong>Resumen Global:</strong> 
-                {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
-                {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
-                Solo se consultan Jobs BROKEN (filtro administrativo) | 
-                Total broken: <strong>{{ global_broken }}</strong> | 
-                Con failures > 0: {{ global_failures }}
-                </p>
-                
-                {% if global_broken > 0 %}
-                <button onclick="toggleJobsDetail()" class="toggle-detail-btn" id="jobs-toggle">
-                    ▼ Ver detalle de {{ global_broken }} jobs broken
-                </button>
+                {% if job_results | length > 0 %}
+                    {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
+                    {% set global_failures = job_results | map(attribute='jobs_with_failures_count') | map('int') | sum %}
+                    <p><strong>Resumen Global:</strong> 
+                    Solo se consultan Jobs BROKEN (filtro administrativo) | 
+                    Total broken: <strong>{{ global_broken }}</strong> | 
+                    Con failures > 0: {{ global_failures }}
+                    </p>
+                    
+                    {% if global_broken > 0 %}
+                    <button onclick="toggleJobsDetail()" class="toggle-detail-btn" id="jobs-toggle">
+                        ▼ Ver detalle de {{ global_broken }} jobs broken
+                    </button>
+                    {% endif %}
+                {% else %}
+                    <p><strong>Sin validaciones de jobs:</strong> 
+                    No se ejecutaron validaciones debido a problemas de conectividad. 
+                    Todas las bases de datos están inaccesibles.</p>
                 {% endif %}
             </div>
 
@@ -221,29 +226,29 @@
                 <tbody>
                     {% for job in job_results %}
                     <tr class="{{ 'critical-alert' if job.broken_jobs_count | int > 0 else '' }}">
-                        <td><strong>{{ job.instancia }}</strong></td>
+                        <td><strong>{{ job.instancia | default('N/A') }}</strong></td>
                         <td>
-                            {% if job.jobs_validation_successful %}
+                            {% if job.jobs_validation_successful | default(false) %}
                                 <span class="status-success">EXITOSA</span>
                             {% else %}
                                 <span class="status-danger">ERROR</span>
                             {% endif %}
                         </td>
-                        <td>{{ job.broken_jobs_count }}</td>
+                        <td>{{ job.broken_jobs_count | default(0) }}</td>
                         <td>
-                            {% if job.broken_jobs_count | int > 0 %}
+                            {% if job.broken_jobs_count | default(0) | int > 0 %}
                                 <span class="status-danger">CRÍTICO</span>
                             {% else %}
                                 <span class="status-success">SIN BROKEN JOBS</span>
                             {% endif %}
                         </td>
-                        <td>{{ job.validation_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+                        <td>{{ (job.validation_timestamp | default('N/A')) | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
                     </tr>
-                    {% if not job.jobs_validation_successful %}
+                    {% if not (job.jobs_validation_successful | default(false)) %}
                     <tr>
                         <td colspan="5">
                             <div class="error-details">
-                                <strong>Error:</strong> {{ job.jobs_validation_error }}
+                                <strong>Error:</strong> {{ job.jobs_validation_error | default('Error desconocido') }}
                             </div>
                         </td>
                     </tr>
@@ -252,7 +257,8 @@
                 </tbody>
             </table>
 
-            <!-- TABLA DETALLADA COLAPSIBLE SIMPLE -->
+            <!-- TABLA DETALLADA COLAPSIBLE -->
+            {% set global_broken = job_results | map(attribute='broken_jobs_count') | map('int') | sum %}
             {% if global_broken > 0 %}
             <div id="jobs-detail" class="collapsible-section">
                 <div class="detail-header">
@@ -272,17 +278,17 @@
                     </thead>
                     <tbody>
                         {% for job in job_results %}
-                            {% if job.broken_jobs_count | int > 0 %}
-                                {% for broken in job.broken_jobs %}
+                            {% if job.broken_jobs_count | default(0) | int > 0 %}
+                                {% for broken in (job.broken_jobs | default([])) %}
                                 <tr class="critical-alert">
                                     <td>{{ broken[0] | default('N/A') }}</td>
-                                    <td><strong>{{ broken[1] | default('N/A') }}</strong></td>
+                                    <td><strong>{{ broken[1] | default(job.instancia) | default('N/A') }}</strong></td>
                                     <td>{{ broken[2] | default('N/A') }}</td>
                                     <td>{{ broken[3] | default('N/A') }}</td>
                                     <td>{{ broken[4] | default('0') }}</td>
                                     <td>{{ broken[6] | default('N/A') }}</td>
                                     <td class="truncated-text" title="{{ broken[7] | default('N/A') | string }}">
-                                        {{ (broken[7] | default('N/A') | string)[:60] }}{% if (broken[7] | default('') | string | length) > 60 %}...{% endif %}
+                                        {{ broken[7] | default('N/A') | string }}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -295,7 +301,13 @@
 
             {% else %}
             <div class="info-box">
-                <p>No hay datos de validación de jobs disponibles.</p>
+                <p><strong>No hay datos de validación de jobs disponibles.</strong></p>
+                <p>Esto ocurre cuando:</p>
+                <ul>
+                    <li>No hay conexiones exitosas a las bases de datos</li>
+                    <li>Las bases de datos están inaccesibles</li>
+                    <li>Errores en la configuración de conectividad</li>
+                </ul>
             </div>
             {% endif %}
 

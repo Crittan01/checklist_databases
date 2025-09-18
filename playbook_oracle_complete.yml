@@ -5,6 +5,7 @@
   connection: local
   gather_facts: true
   vars:
+    # INICIALIZACIÓN EXPLÍCITA - Evita variables undefined
     connectivity_results: []
     backup_results: []
     job_results: []
@@ -18,7 +19,7 @@
           - "Total: {{ oracle_databases.keys() | list | length }} instancias"
 
   tasks:
-    # FASE 1: CONECTIVIDAD (Estandarizada)
+    # FASE 1: CONECTIVIDAD
     - name: "FASE 1: Conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
@@ -29,33 +30,41 @@
       loop_control:
         label: "{{ item.key }}"
 
-    # FASE 2: BACKUPS (Estandarizada)
+    # VERIFICACIÓN DE CONECTIVIDAD EXITOSA
+    - name: "Verificar si hay conexiones exitosas"
+      ansible.builtin.set_fact:
+        successful_connections: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+
+    # FASE 2: BACKUPS (Solo si hay conexiones exitosas)
     - name: "FASE 2: Backups {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_bk
       vars:
         current_database_key: "{{ item.instancia_key }}"
         current_database: "{{ oracle_databases[item.instancia_key] }}"
-      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop: "{{ successful_connections }}"
       loop_control:
         label: "{{ item.instancia_key }}"
+      when: successful_connections | length > 0
 
-    # FASE 3: JOBS (Estandarizada)
+    # FASE 3: JOBS (Solo si hay conexiones exitosas)
     - name: "FASE 3: Jobs {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_jobs
       vars:
         current_database_key: "{{ item.instancia_key }}"
         current_database: "{{ oracle_databases[item.instancia_key] }}"
-      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop: "{{ successful_connections }}"
       loop_control:
         label: "{{ item.instancia_key }}"
+      when: successful_connections | length > 0
 
-    # GENERAR REPORTE
+    # GENERAR REPORTE - VARIABLES SEGURAS
     - name: "Generar reporte HTML completo"
       ansible.builtin.include_role:
         name: inventory
       vars:
+        # PASAR LISTAS DIRECTAMENTE - Sin referencia circular
         report_connectivity_results: "{{ connectivity_results }}"
         report_backup_results: "{{ backup_results }}"
         report_job_results: "{{ job_results }}"
@@ -68,6 +77,8 @@
           - "=== RESUMEN EJECUTIVO ==="
           - "Conectividad: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}
             /{{ connectivity_results | length }}"
+          - "Backups validados: {{ backup_results | length }}"
+          - "Jobs validados: {{ job_results | length }}"
           - "Backups con error: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
           - "Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
           - "Reporte: reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
