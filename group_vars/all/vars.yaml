@@ -7,6 +7,8 @@ oracle_common:
   error_patterns: ["ORA-", "TNS-", "Error"]
   validation_timeout: 60
   connection_retry: 1
+  diskgroup_critical_usage: 80
+  diskgroup_min_free_mb: 100000
 
 # Inventario de bases de datos
 oracle_databases:

@@ -190,4 +190,111 @@
         <p>No hay datos de validación de backups disponibles.</p>
     </div>
     {% endif %}
+
+    <!-- ESTADO DE DISKGROUPS ASM -->
+    <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: Diskgroups ASM (Ocupación > 80%)</h3>
+    <div class="summary-stats">
+        <p><strong>Criterio de Evaluación:</strong> Solo se muestran diskgroups con ocupación > 80% Y espacio libre < 100GB</p>
+        {% if diskgroup_results | length > 0 %}
+        {% set global_critical = diskgroup_results | map(attribute='total_critical_diskgroups') | map('int') | sum %}
+        <p><strong>Resumen Global:</strong> {{ global_critical }} diskgroups críticos encontrados</p>
+        {% endif %}
+    </div>
+
+    {% if diskgroup_results | length > 0 %}
+    <table class="operational-table">
+        <thead>
+            <tr>
+                <th>Instancia</th>
+                <th>Estado Validación</th>
+                <th>Diskgroups Críticos</th>
+                <th>Muy Críticos (>95%)</th>
+                <th>Estado General</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dg in diskgroup_results %}
+            <tr class="{{ 'critical-alert' if dg.total_critical_diskgroups | int > 0 else '' }}">
+                <td><strong>{{ dg.instancia | default('N/A') }}</strong></td>
+                <td>
+                    {% if dg.diskgroup_validation_successful | default(false) %}
+                        <span class="status-success">EXITOSA</span>
+                    {% else %}
+                        <span class="status-danger">ERROR</span>
+                    {% endif %}
+                </td>
+                <td>{{ dg.total_critical_diskgroups | default(0) }}</td>
+                <td>{{ dg.very_critical_diskgroups | default([]) | length }}</td>
+                <td>
+                    {% if dg.total_critical_diskgroups | default(0) | int > 0 %}
+                        <span class="status-danger">CRÍTICO</span>
+                    {% else %}
+                        <span class="status-success">SIN ALERTAS</span>
+                    {% endif %}
+                </td>
+                <td>{{ (dg.validation_timestamp | default('N/A')) | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+            </tr>
+            {% if not (dg.diskgroup_validation_successful | default(false)) %}
+            <tr>
+                <td colspan="6">
+                    <div class="error-details">
+                        <strong>Error:</strong> {{ dg.diskgroup_validation_error | default('Error desconocido') }}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- DETALLE DE DISKGROUPS CRÍTICOS -->
+    {% set global_critical = diskgroup_results | map(attribute='total_critical_diskgroups') | map('int') | sum %}
+    {% if global_critical > 0 %}
+    <div style="margin-top: 20px;">
+        <h4>DETALLE: Diskgroups Críticos ({{ global_critical }} encontrados)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>Diskgroup</th>
+                    <th>Estado</th>
+                    <th>Tipo</th>
+                    <th>Total (MB)</th>
+                    <th>Libre (MB)</th>
+                    <th>Ocupado (MB)</th>
+                    <th>% Ocupación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dg in diskgroup_results %}
+                    {% if dg.total_critical_diskgroups | default(0) | int > 0 %}
+                        {% for critical in (dg.critical_diskgroups | default([])) %}
+                        <tr class="{{ 'critical-alert' if critical[7] | float > 95 else 'warning-alert' }}">
+                            <td>{{ critical[0] | default('N/A') }}</td>
+                            <td><strong>{{ critical[1] | default('N/A') }}</strong></td>
+                            <td>{{ critical[2] | default('N/A') }}</td>
+                            <td>{{ critical[3] | default('N/A') }}</td>
+                            <td>{{ '{:,}'.format(critical[4] | int) if critical[4] | string | length > 0 else 'N/A' }}</td>
+                            <td>{{ '{:,}'.format(critical[5] | int) if critical[5] | string | length > 0 else 'N/A' }}</td>
+                            <td>{{ '{:,}'.format(critical[6] | int) if critical[6] | string | length > 0 else 'N/A' }}</td>
+                            <td>
+                                <strong style="color: {{ 'var(--danger-color)' if critical[7] | float > 95 else 'var(--warning-color)' }};">
+                                    {{ '{:.1f}'.format(critical[7] | float) }}%
+                                </strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="info-box">
+        <p>No hay datos de validación de diskgroups disponibles.</p>
+    </div>
+    {% endif %}
 </div>

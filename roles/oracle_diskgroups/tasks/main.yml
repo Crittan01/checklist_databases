@@ -1,0 +1,79 @@
+---
+# tasks file for roles/oracle_diskgroups
+- name: "Diskgroups con alta ocupación {{ current_database_key }}"
+  mi_org.oracle.oracle_sql_async:
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
+    sql: |
+      SELECT
+        HOST_NAME,
+        NAME,
+        STATE,
+        TYPE,
+        TOTAL_MB,
+        FREE_MB,
+        TOTAL_MB-FREE_MB as OCUPADO_MB,
+        ((TOTAL_MB-FREE_MB)/TOTAL_MB*100) as PORC_OCUPADO
+      FROM V$ASM_DISKGROUP, v$instance
+      WHERE ((TOTAL_MB-FREE_MB)/TOTAL_MB*100) > 80
+        AND FREE_MB < 100000
+      ORDER BY NAME, FREE_MB/TOTAL_MB*100 DESC
+    mode: normal
+  register: diskgroup_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar diskgroups {{ current_database_key }}"
+  ansible.builtin.set_fact:
+    diskgroup_results: "{{ diskgroup_results + [diskgroup_item] }}"
+  vars:
+    # Detección de errores usando regex
+    msg_string: "{{ diskgroup_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ diskgroup_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+
+    # Datos solo si es exitoso
+    diskgroup_data: "{{ diskgroup_result.msg | default([]) if is_successful
+      and diskgroup_result.msg is iterable
+      and diskgroup_result.msg is not string else [] }}"
+
+    diskgroup_item:
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
+
+      # Estado de validación
+      diskgroup_validation_successful: "{{ is_successful }}"
+      diskgroup_validation_error: "{{ diskgroup_result.msg | default('') if not is_successful else '' }}"
+
+      # Datos y análisis - ALERTA = query filtra
+      diskgroup_data: "{{ diskgroup_data }}"
+      critical_diskgroups: "{{ diskgroup_data }}"
+
+      # Contadores
+      total_critical_diskgroups: "{{ diskgroup_data | length }}"
+
+      # Análisis adicional
+      very_critical_diskgroups: "{{ diskgroup_data | selectattr('7', 'greaterthan', 95) | list if diskgroup_data | length > 0 else [] }}"
+      low_free_space: "{{ diskgroup_data | selectattr('5', 'lessthan', 50000) | list if diskgroup_data | length > 0 else [] }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Resumen diskgroups {{ current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "{{ current_database_key }}: {{ diskgroup_data | length }} diskgroups críticos encontrados"
+      - "{% if diskgroup_data | length > 0 %}Más críticos (>95%): {{ diskgroup_data | selectattr('7', 'greaterthan', 95) | list | length }}{% endif %}"
+  vars:
+    msg_string: "{{ diskgroup_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ diskgroup_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    diskgroup_data: "{{ diskgroup_result.msg | default([]) if is_successful
+      and diskgroup_result.msg is iterable
+      and diskgroup_result.msg is not string else [] }}"

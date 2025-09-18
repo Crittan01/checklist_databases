@@ -9,6 +9,7 @@
     connectivity_results: []
     backup_results: []
     job_results: []
+    diskgroup_results: []
 
   pre_tasks:
     - name: "Mostrar inicio del checklist completo"
@@ -59,6 +60,18 @@
         label: "{{ item.instancia_key }}"
       when: successful_connections | length > 0
 
+    # FASE 4: DISKGROUPS (Solo si hay conexiones exitosas)
+    - name: "FASE 4: Diskgroups {{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_diskgroups
+      vars:
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
+      loop: "{{ successful_connections }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: successful_connections | length > 0
+
     # GENERAR REPORTE - VARIABLES SEGURAS
     - name: "Generar reporte HTML completo"
       ansible.builtin.include_role:
@@ -69,6 +82,7 @@
         report_backup_results: "{{ backup_results }}"
         report_job_results: "{{ job_results }}"
         report_oracle_databases: "{{ oracle_databases }}"
+        report_diskgroup_results: "{{ diskgroup_results }}"
 
   post_tasks:
     - name: "Resumen ejecutivo"
@@ -79,6 +93,9 @@
             /{{ connectivity_results | length }}"
           - "Backups validados: {{ backup_results | length }}"
           - "Jobs validados: {{ job_results | length }}"
-          - "Backups con error: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
-          - "Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
+          - "Diskgroups validados: {{ diskgroup_results | default([]) | length }}"
+          - "ALERTAS:"
+          - "  - Backups con error: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+          - "  - Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
+          - "  - Diskgroups críticos: {{ diskgroup_results | default([]) | map(attribute='total_critical_diskgroups') | map('int') | sum }}"
           - "Reporte: reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"

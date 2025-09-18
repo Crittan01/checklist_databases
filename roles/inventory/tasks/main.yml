@@ -6,13 +6,15 @@
     state: directory
     mode: "0755"
 
-# VALIDACIÓN DE LISTAS - Evitar errores con listas (vacias))
+# VALIDACIÓN DE LISTAS - Evitar errores con listas (vacias)
 - name: "Validar y inicializar listas de resultados"
   ansible.builtin.set_fact:
     safe_connectivity_results: "{{ report_connectivity_results | default([]) }}"
     safe_backup_results: "{{ report_backup_results | default([]) }}"
     safe_job_results: "{{ report_job_results | default([]) }}"
+    safe_diskgroup_results: "{{ report_diskgroup_results | default([]) }}"
 
+# CALCULAR ESTADÍSTICAS CONSOLIDADAS
 - name: "Calcular estadísticas consolidadas"
   ansible.builtin.set_fact:
     stats:
@@ -34,24 +36,28 @@
       broken_jobs_count: "{{ safe_job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
       jobs_failures_count: "{{ safe_job_results | map(attribute='jobs_with_failures_count') | map('int') | sum }}"
 
+      # Diskgroups
+      diskgroup_critical_count: "{{ safe_diskgroup_results | map(attribute='total_critical_diskgroups') | map('int') | sum }}"
+      diskgroup_very_critical_count: "{{ safe_diskgroup_results | map(attribute='very_critical_diskgroups') | flatten | length }}"
+
 - name: "Calcular alertas totales"
   ansible.builtin.set_fact:
     stats: "{{ stats | combine({'total_alerts': (stats.failed_conns | int) +
       (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) +
-      (stats.broken_jobs_count | int)}) }}"
+      (stats.broken_jobs_count | int) + (stats.diskgroup_critical_count | int)}) }}"
 
-# GENERAR REPORTE - MANTENER IGUAL
+# GENERAR REPORTE
 - name: "Generar reporte HTML"
   ansible.builtin.template:
-    src: "oracle_inventory_report.j2" # MISMO TEMPLATE
+    src: "oracle_inventory_report.j2"
     dest: "{{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
     mode: "0644"
   vars:
-    # VARIABLES DIRECTAS - Sin referencias circulares
+    # VARIABLES DIRECTAS
     hostname: "{{ ansible_hostname }}"
     execution_date: "{{ ansible_date_time.date }}"
     execution_time: "{{ ansible_date_time.time }}"
-    # USAR VARIABLES SEGURAS
+    # VARIABLES SEGURAS
     connectivity_results: "{{ safe_connectivity_results }}"
     backup_results: "{{ safe_backup_results }}"
     job_results: "{{ safe_job_results }}"
@@ -66,3 +72,4 @@
       - "  └─ Conectividad: {{ stats.failed_conns }}"
       - "  └─ Backups: {{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }}"
       - "  └─ Jobs: {{ stats.broken_jobs_count | int }}"
+      - "  └─ Diskgroups: {{ stats.diskgroup_critical_count | int }}"

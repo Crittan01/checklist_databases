@@ -95,6 +95,22 @@
                         </td>
                     {% endif %}
                 </tr>
+                <tr>
+                    <td><strong>Diskgroups</strong></td>
+                    {% if stats.successful_conns | int == 0 %}
+                        <td>No evaluado</td>
+                        <td><span class="status-warning">NO EVALUADO</span></td>
+                    {% else %}
+                        <td>{{ stats.diskgroup_critical_count }} diskgroups críticos</td>
+                        <td>
+                            {% if stats.diskgroup_critical_count | int > 0 %}
+                                <span class="status-danger">CRÍTICO</span>
+                            {% else %}
+                                <span class="status-success">OK</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
             </tbody>
         </table>
     </div>

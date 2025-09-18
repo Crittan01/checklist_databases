@@ -1,0 +1,18 @@
+---
+# Resumen de diskgroups - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de diskgroups"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de diskgroups.
+      Verifique conectividad o configuración de bases de datos.
+  when: diskgroup_results | length == 0
+
+- name: "Resumen ejecutivo de diskgroups"
+  ansible.builtin.debug:
+    msg:
+      - "=== DISKGROUPS ASM ORACLE ==="
+      - "Bases validadas: {{ diskgroup_results | length }}"
+      - "Diskgroups críticos: {{ diskgroup_results | map(attribute='total_critical_diskgroups') | map('int') | sum }}"
+      - "Muy críticos (>95%): {{ diskgroup_results | map(attribute='very_critical_diskgroups') | flatten | length }}"
+      - "Con poco espacio (<50GB): {{ diskgroup_results | map(attribute='low_free_space') | flatten | length }}"
+      - "Estado general: {{ 'CRÍTICO' if diskgroup_results | map(attribute='total_critical_diskgroups') | map('int') | sum > 0 else 'OK' }}"
