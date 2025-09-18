@@ -40,10 +40,10 @@
       (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) +
       (stats.broken_jobs_count | int)}) }}"
 
-# GENERAR REPORTE
+# GENERAR REPORTE - MANTENER IGUAL
 - name: "Generar reporte HTML"
   ansible.builtin.template:
-    src: "oracle_inventory_report.j2"
+    src: "oracle_inventory_report.j2" # MISMO TEMPLATE
     dest: "{{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
     mode: "0644"
   vars:

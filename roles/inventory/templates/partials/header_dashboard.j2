@@ -1,0 +1,101 @@
+<!-- Header -->
+<div class="header">
+    <h1>Oracle Database Check Report</h1>
+    <div class="header-info">
+        <div><strong>Ejecutado desde:</strong> {{ hostname }}</div>
+        <div><strong>Fecha:</strong> {{ execution_date }}</div>
+        <div><strong>Hora:</strong> {{ execution_time }}</div>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard">
+    <div class="summary-card">
+        <h2 class="summary-title">Resumen de Conectividad</h2>
+        <div class="metric">
+            <div class="metric-value">{{ stats.connectivity_percent }}%</div>
+            <div class="metric-label">Conectividad</div>
+        </div>
+        <table style="margin: 10px 0; box-shadow: none;">
+            <tr>
+                <td><strong>Total Bases:</strong></td>
+                <td>{{ stats.total_dbs }}</td>
+            </tr>
+            <tr style="background: rgba(39, 174, 96, 0.1);">
+                <td><strong>Conectadas:</strong></td>
+                <td>{{ stats.successful_conns }}</td>
+            </tr>
+            <tr style="background: rgba(231, 76, 60, 0.1);">
+                <td><strong>Fallidas:</strong></td>
+                <td>{{ stats.failed_conns }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="summary-card">
+        <h2 class="summary-title">Estado de Alertas por Dominio</h2>
+        <div class="metric">
+            <div class="metric-value" style="color: {{ 'var(--success-color)' if stats.total_alerts | int == 0 and stats.successful_conns | int > 0 else 'var(--danger-color)' }};">
+                {{ stats.total_alerts }}
+            </div>
+            <div class="metric-label">Total Alertas</div>
+        </div>
+        <table style="margin: 10px 0; box-shadow: none;">
+            <thead>
+                <tr style="background: var(--light-color); font-weight: 600;">
+                    <td><strong>DOMINIO</strong></td>
+                    <td><strong>ALERTAS</strong></td>
+                    <td><strong>ESTADO</strong></td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Conectividad</strong></td>
+                    <td>{{ stats.failed_conns }} bases sin acceso</td>
+                    <td>
+                        {% if stats.failed_conns | int > 0 %}
+                            <span class="status-danger">CRÍTICO</span>
+                        {% else %}
+                            <span class="status-success">OK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Backups</strong></td>
+                    {% if stats.successful_conns | int == 0 %}
+                        <td>No evaluado</td>
+                        <td><span class="status-warning">NO EVALUADO</span></td>
+                    {% else %}
+                        <td>{{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }} alertas
+                            ({{ (stats.backup_errors_count | int) }} fallidos + {{ (stats.instances_no_archivelog_count | int) }} sin ARCHIVELOG)</td>
+                        <td>
+                            {% if stats.backup_errors_count | int > 0 %}
+                                <span class="status-danger">CRÍTICO</span>
+                            {% elif stats.instances_no_archivelog_count | int > 0 %}
+                                <span class="status-warning">VERIFICAR</span>
+                            {% else %}
+                                <span class="status-success">OK</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
+                <tr>
+                    <td><strong>Jobs</strong></td>
+                    {% if stats.successful_conns | int == 0 %}
+                        <td>No evaluado</td>
+                        <td><span class="status-warning">NO EVALUADO</span></td>
+                    {% else %}
+                        <td>{{ stats.broken_jobs_count }} jobs broken</td>
+                        <td>
+                            {% if stats.broken_jobs_count | int > 0 %}
+                                <span class="status-danger">CRÍTICO</span>
+                            {% else %}
+                                <span class="status-success">OK</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

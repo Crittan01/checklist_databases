@@ -1,0 +1,47 @@
+<!-- Fase 1: Conectividad -->
+<div id="fase1" class="tab-content active">
+    <h2>Conectividad Oracle</h2>
+    <p>Estado de conexiones a todas las bases de datos del inventario.</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Instancia</th>
+                <th>Host</th>
+                <th>IP:Puerto</th>
+                <th>TNS</th>
+                <th>Usuario</th>
+                <th>Estado</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for conn in connectivity_results %}
+            <tr class="{{ 'critical-alert' if not conn.connection_successful else '' }}">
+                <td><strong>{{ conn.instancia }}</strong></td>
+                <td>{{ conn.host }}</td>
+                <td>{{ conn.direccion_ip }}:{{ conn.puerto }}</td>
+                <td>{{ conn.cadena_tns }}</td>
+                <td>{{ conn.usuario }}</td>
+                <td>
+                    {% if conn.connection_successful %}
+                        <span class="status-success">CONECTADA</span>
+                    {% else %}
+                        <span class="status-danger">ERROR</span>
+                    {% endif %}
+                </td>
+                <td>{{ conn.test_timestamp | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+            </tr>
+            {% if not conn.connection_successful and conn.connection_error %}
+            <tr class="critical-alert">
+                <td colspan="7">
+                    <div class="error-details">
+                        <strong>Error:</strong> {{ conn.connection_error }}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
