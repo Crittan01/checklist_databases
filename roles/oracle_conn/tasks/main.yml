@@ -1,5 +1,5 @@
 ---
-# Conectividad Oracle - ESTANDARIZADA
+# tasks file for roles/oracle_conn
 - name: "Conexión completa a {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
     hostname: "{{ current_database.direccion_ip }}"
@@ -28,7 +28,7 @@
   ansible.builtin.set_fact:
     connectivity_results: "{{ connectivity_results + [connectivity_item] }}"
   vars:
-    # Detección de errores Oracle usando regex nativo de Ansible
+    # Detección de errores Oracle usando regex
     msg_string: "{{ connection_result.msg | default('') | string }}"
     has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
     has_failed: "{{ connection_result.failed | default(false) }}"

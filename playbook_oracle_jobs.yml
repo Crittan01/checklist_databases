@@ -15,7 +15,7 @@
         name: oracle_utils
         tasks_from: validate_target_database.yml
 
-    # Verificación de acceso ligera
+    # Conectividad ligera (verificación básica)
     - name: "Verificar acceso {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn

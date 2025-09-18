@@ -1,5 +1,5 @@
 ---
-# Validación de jobs - SIMPLIFICADA
+# tasks file for roles/oracle_jobs
 - name: "Jobs broken {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
     hostname: "{{ current_database.direccion_ip }}"
@@ -29,7 +29,7 @@
   ansible.builtin.set_fact:
     job_results: "{{ job_results + [job_item] }}"
   vars:
-    # Detección de errores usando regex nativo
+    # Detección de errores usando regex
     msg_string: "{{ jobs_result.msg | default('') | string }}"
     has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
     has_failed: "{{ jobs_result.failed | default(false) }}"
@@ -53,7 +53,7 @@
 
       # Datos y análisis
       jobs_data: "{{ jobs_data }}"
-      broken_jobs: "{{ jobs_data }}" # Todos son broken porque el WHERE filtra
+      broken_jobs: "{{ jobs_data }}" # Todos son broken ( WHERE filtra )
       jobs_with_failures: "{{ jobs_with_failures_list }}"
 
       # Contadores simplificados

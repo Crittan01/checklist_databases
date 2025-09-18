@@ -51,7 +51,7 @@
       loop_control:
         label: "{{ item.instancia_key }}"
 
-    # GENERAR REPORTE (Simplificado)
+    # GENERAR REPORTE
     - name: "Generar reporte HTML completo"
       ansible.builtin.include_role:
         name: inventory

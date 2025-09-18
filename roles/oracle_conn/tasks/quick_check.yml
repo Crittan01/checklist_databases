@@ -1,5 +1,5 @@
 ---
-# Verificación rápida de conectividad para playbooks modulares
+# tasks file for roles/oracle_conn
 - name: "Verificación rápida {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
     hostname: "{{ current_database.direccion_ip }}"

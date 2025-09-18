@@ -1,5 +1,5 @@
 ---
-# Validación de backups - SIMPLIFICADA
+# tasks file for roles/oracle_bk
 - name: "Backups últimas 12h {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
     hostname: "{{ current_database.direccion_ip }}"
@@ -30,7 +30,7 @@
   ansible.builtin.set_fact:
     backup_results: "{{ backup_results + [backup_item] }}"
   vars:
-    # Detección de errores usando regex nativo
+    # Detección de errores usando regex
     msg_string: "{{ backup_result.msg | default('') | string }}"
     has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
     has_failed: "{{ backup_result.failed | default(false) }}"
@@ -39,7 +39,7 @@
     # Datos solo si es exitoso
     backup_data: "{{ backup_result.msg | default([]) if is_successful and backup_result.msg is iterable and backup_result.msg is not string else [] }}"
 
-    # Análisis usando índices (manteniendo compatibilidad)
+    # Análisis usando índices
     failed_backups_list: "{{ backup_data | selectattr('5', 'equalto', 'FAILED') | list }}"
     archivelog_backups: "{{ backup_data | selectattr('4', 'equalto', 'ARCHIVELOG') | list }}"
 

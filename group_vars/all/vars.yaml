@@ -1,14 +1,14 @@
 ---
-# Configuración global Oracle - Consolidada
+# Configuración global Oracle
 oracle_timeout: 60
 
-# Configuración común para validaciones
+# Configuración 'common' para validaciones
 oracle_common:
   error_patterns: ["ORA-", "TNS-", "Error"]
   validation_timeout: 60
   connection_retry: 1
 
-# Inventario simplificado de bases de datos
+# Inventario de bases de datos
 oracle_databases:
   dbMayus1:
     # Datos de conexión
@@ -26,6 +26,7 @@ oracle_databases:
     release_bd: "19.0.0.0"
 
   dbprueba:
+    # Datos de conexión
     instancia: "dbprueba"
     host: "oracle7db"
     direccion_ip: "192.168.20.230"
@@ -33,12 +34,14 @@ oracle_databases:
     usuario: "ansible_user"
     password: "ansibledb123*"
     puerto: 1521
+    # Metadatos para reporte
     motor_bd: "Oracle"
     sistema_operativo: "Red Hat Enterprise Linux Server"
     release_so: "8.x"
     release_bd: "19.0.0.0"
 
   PRUEBA:
+    # Datos de conexión
     instancia: "PRUEBA"
     host: "oracle7db"
     direccion_ip: "192.168.20.230"
@@ -46,12 +49,14 @@ oracle_databases:
     usuario: "ansible_user"
     password: "ansibledb123*"
     puerto: 1521
+    # Metadatos para reporte
     motor_bd: "Oracle"
     sistema_operativo: "Red Hat Enterprise Linux Server"
     release_so: "8.x"
     release_bd: "19.0.0.0"
 
   dbotro:
+    # Datos de conexión
     instancia: "dbotro"
     host: "oracle7db"
     direccion_ip: "192.168.20.230"
@@ -59,6 +64,7 @@ oracle_databases:
     usuario: "ansible_user"
     password: "ansibledb123*"
     puerto: 1521
+    # Metadatos para reporte
     motor_bd: "Oracle"
     sistema_operativo: "Red Hat Enterprise Linux Server"
     release_so: "8.x"

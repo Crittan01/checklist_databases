@@ -1,5 +1,5 @@
 ---
-# Generación de reporte - OPTIMIZADA
+# tasks file for roles/inventory
 - name: "Crear directorio de reportes"
   ansible.builtin.file:
     path: "{{ ansible_env.PWD }}/reports"

@@ -8,7 +8,7 @@
     connectivity_results: []
 
   tasks:
-    # Usar lógica común de validación
+    # Validación común
     - name: "Validar parámetros de entrada"
       ansible.builtin.include_role:
         name: oracle_utils
