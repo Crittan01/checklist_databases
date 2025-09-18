@@ -64,5 +64,5 @@
       - "Conectividad: {{ stats.connectivity_percent }}% ({{ stats.successful_conns }}/{{ stats.total_dbs }})"
       - "Alertas totales: {{ stats.total_alerts }}"
       - "  └─ Conectividad: {{ stats.failed_conns }}"
-      - "  └─ Backups: {{ stats.backup_errors_count + stats.instances_no_archivelog_count }}"
-      - "  └─ Jobs: {{ stats.broken_jobs_count }}"
+      - "  └─ Backups: {{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }}"
+      - "  └─ Jobs: {{ stats.broken_jobs_count | int }}"

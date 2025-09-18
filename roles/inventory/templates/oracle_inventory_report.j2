@@ -78,7 +78,8 @@
                                 <td>No evaluado</td>
                                 <td><span class="status-warning">NO EVALUADO</span></td>
                             {% else %}
-                                <td>{{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }} alertas</td>
+                                <td>{{ (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) }} alertas
+                                    ({{ (stats.backup_errors_count | int) }} fallidos + {{ (stats.instances_no_archivelog_count | int) }} sin ARCHIVELOG)</td>
                                 <td>
                                     {% if stats.backup_errors_count | int > 0 %}
                                         <span class="status-danger">CRÍTICO</span>
