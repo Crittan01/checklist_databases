@@ -1,5 +1,5 @@
 ---
-# Playbook modular - Solo Conectividad Oracle - OPTIMIZADO
+# Playbook modular - Solo Conectividad Oracle
 - name: Oracle Database Connectivity Only
   hosts: localhost
   connection: local

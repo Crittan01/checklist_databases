@@ -1,5 +1,5 @@
 ---
-# Playbook modular - Solo Validación de Backups - OPTIMIZADO
+# Playbook modular - Solo Validación de Backups
 - name: Oracle Database Backups Validation Only
   hosts: localhost
   connection: local

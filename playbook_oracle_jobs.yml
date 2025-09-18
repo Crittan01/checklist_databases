@@ -1,5 +1,5 @@
 ---
-# Playbook modular - Solo Validación de Jobs - OPTIMIZADO
+# Playbook modular - Solo Validación de Jobs
 - name: Oracle Database Jobs Validation Only
   hosts: localhost
   connection: local

@@ -1,5 +1,5 @@
 ---
-# Playbook para AAP - Checklist Oracle Completo - OPTIMIZADO
+# Playbook para AAP - Checklist Oracle Completo
 - name: Oracle Database Complete Inventory and Validations
   hosts: localhost
   connection: local
