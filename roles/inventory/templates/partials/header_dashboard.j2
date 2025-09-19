@@ -127,6 +127,22 @@
                         </td>
                     {% endif %}
                 </tr>
+                <tr>
+                    <td><strong>Estadísticas</strong></td>
+                    {% if stats.successful_conns | int == 0 %}
+                        <td>No evaluado</td>
+                        <td><span class="status-warning">NO EVALUADO</span></td>
+                    {% else %}
+                        <td>{{ stats.stats_critical_count }} tablas stale</td>
+                        <td>
+                            {% if stats.stats_critical_count | int > 0 %}
+                                <span class="status-warning">ATENCIÓN</span>
+                            {% else %}
+                                <span class="status-success">OK</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
             </tbody>
         </table>
     </div>

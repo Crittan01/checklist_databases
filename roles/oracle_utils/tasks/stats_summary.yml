@@ -1,0 +1,17 @@
+---
+# Resumen de estadísticas - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de estadísticas"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de estadísticas.
+      Verifique conectividad o configuración de bases de datos.
+  when: stats_results | length == 0
+
+- name: "Resumen ejecutivo de estadísticas"
+  ansible.builtin.debug:
+    msg:
+      - "=== ESTADÍSTICAS ORACLE ==="
+      - "Bases validadas: {{ stats_results | length }}"
+      - "Tablas con estadísticas stale: {{ stats_results | map(attribute='total_stale_tables') | map('int') | sum }}"
+      - "Owners afectados: {{ stats_results | map(attribute='unique_owners') | map('int') | sum }}"
+      - "Estado general: {{ 'ATENCIÓN' if stats_results | map(attribute='total_stale_tables') | map('int') | sum > 0 else 'OK' }}"

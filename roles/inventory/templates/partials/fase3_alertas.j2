@@ -225,5 +225,35 @@
     </div>
     {% endif %}
 
+    <!-- ALERTAS DE ADVERTENCIA: ESTADÍSTICAS STALE -->
+    {% if stats.stats_critical_count | int > 0 %}
+    <div class="warning-section">
+        <h3 style="color: var(--warning-color);">ADVERTENCIA: Estadísticas Obsoletas ({{ stats.stats_critical_count }})</h3>
+        <p><strong>Acción requerida:</strong> Actualizar estadísticas para mejorar rendimiento de queries.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Instancia</th>
+                    <th>Owner</th>
+                    <th>Tabla</th>
+                    <th>Comando Sugerido</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in stats_results %}
+                    {% for stale in (stat.stale_tables | default([])) %}
+                    <tr class="warning-alert">
+                        <td><strong>{{ stat.instancia }}</strong></td>
+                        <td>{{ stale[0] | default('N/A') }}</td>
+                        <td>{{ stale[1] | default('N/A') }}</td>
+                        <td style="font-family: monospace; font-size: 11px;">{{ stale[2] | default('N/A') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
     {% endif %}
 </div>

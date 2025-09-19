@@ -11,6 +11,7 @@
     job_results: []
     diskgroup_results: []
     dataguard_results: []
+    stats_results: []
 
   pre_tasks:
     - name: "Mostrar inicio del checklist completo"
@@ -85,6 +86,17 @@
         label: "{{ item.instancia_key }}"
       when: successful_connections | length > 0
 
+    - name: "FASE 6: Estadísticas {{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_stats
+      vars:
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
+      loop: "{{ successful_connections }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: successful_connections | length > 0
+
     # GENERAR REPORTE - VARIABLES SEGURAS
     - name: "Generar reporte HTML completo"
       ansible.builtin.include_role:
@@ -97,6 +109,7 @@
         report_oracle_databases: "{{ oracle_databases }}"
         report_diskgroup_results: "{{ diskgroup_results }}"
         report_dataguard_results: "{{ dataguard_results }}"
+        report_stats_results: "{{ stats_results }}"
 
   post_tasks:
     - name: "Resumen ejecutivo"
@@ -114,4 +127,5 @@
           - "  - Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
           - "  - Diskgroups críticos: {{ diskgroup_results | default([]) | map(attribute='total_critical_diskgroups') | map('int') | sum }}"
           - "  - DataGuard lag crítico: {{ dataguard_results | default([]) | map(attribute='critical_threads') | map('int') | sum }}"
+          - "  - Tablas con estadísticas stale: {{ stats_results | default([]) | map(attribute='total_stale_tables') | map('int') | sum }}"
           - "Reporte: reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"

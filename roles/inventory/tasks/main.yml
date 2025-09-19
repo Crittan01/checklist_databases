@@ -14,6 +14,7 @@
     safe_job_results: "{{ report_job_results | default([]) }}"
     safe_diskgroup_results: "{{ report_diskgroup_results | default([]) }}"
     safe_dataguard_results: "{{ report_dataguard_results | default([]) }}"
+    safe_stats_results: "{{ report_stats_results | default([]) }}"
 
 # CALCULAR ESTADÍSTICAS CONSOLIDADAS
 - name: "Calcular estadísticas consolidadas"
@@ -45,12 +46,16 @@
       dataguard_critical_count: "{{ safe_dataguard_results | map(attribute='critical_threads') | map('int') | sum }}"
       dataguard_max_lag: "{{ safe_dataguard_results | map(attribute='max_lag') | max if safe_dataguard_results | length > 0 else 0 }}"
 
+      # Estadísticas
+      stats_critical_count: "{{ safe_stats_results | map(attribute='total_stale_tables') | map('int') | sum }}"
+      stats_owners_count: "{{ safe_stats_results | map(attribute='unique_owners') | map('int') | sum }}"
+
 - name: "Calcular alertas totales"
   ansible.builtin.set_fact:
     stats: "{{ stats | combine({'total_alerts': (stats.failed_conns | int) +
       (stats.backup_errors_count | int) + (stats.instances_no_archivelog_count | int) +
       (stats.broken_jobs_count | int) + (stats.diskgroup_critical_count | int) +
-      (stats.dataguard_critical_count | int)}) }}"
+      (stats.dataguard_critical_count | int) + (stats.stats_critical_count | int)}) }}"
 
 # GENERAR REPORTE
 - name: "Generar reporte HTML"

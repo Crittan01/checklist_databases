@@ -1,0 +1,68 @@
+---
+# tasks file for roles/oracle_stats
+- name: "Estadísticas stale {{ current_database_key }}"
+  mi_org.oracle.oracle_sql_async:
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
+    sql: |
+      select
+        owner,
+        table_name,
+        'EXEC DBMS_STATS.GATHER_TABLE_STATS ('||CHR(39)||owner||CHR(39)||','||CHR(39)||TABLE_NAME||CHR(39)||');' as gather_command
+      from sys.DBA_TAB_STATISTICS
+      where STALE_STATS='YES'
+      and owner not in ('AUDSYS','SYS','EXFSYS','CTXSYS','OLIB','SYSTEM','EXFSYS','SYSMAN')
+      and STATTYPE_LOCKED is null
+      order by owner, table_name
+    mode: normal
+  register: stats_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar estadísticas {{ current_database_key }}"
+  ansible.builtin.set_fact:
+    stats_results: "{{ stats_results + [stats_item] }}"
+  vars:
+    # Detección de errores usando regex (mismo patrón)
+    msg_string: "{{ stats_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ stats_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+
+    # Datos solo si es exitoso
+    stats_data: "{{ stats_result.msg | default([]) if is_successful and stats_result.msg is iterable and stats_result.msg is not string else [] }}"
+
+    stats_item:
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
+
+      # Estado de validación
+      stats_validation_successful: "{{ is_successful }}"
+      stats_validation_error: "{{ stats_result.msg | default('') if not is_successful else '' }}"
+
+      # Datos y análisis
+      stats_data: "{{ stats_data }}"
+      stale_tables: "{{ stats_data }}" # Todas son stale (query filtra)
+
+      # Contadores simplificados
+      total_stale_tables: "{{ stats_data | length }}"
+      unique_owners: "{{ stats_data | map(attribute='0') | list | unique | length if stats_data | length > 0 else 0 }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Resumen estadísticas {{ current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "{{ current_database_key }}: {{ stats_data | length }} tablas con estadísticas stale, {{ stats_data | map(attribute='0')
+        | list | unique | length if stats_data | length > 0 else 0 }} owners afectados"
+  vars:
+    msg_string: "{{ stats_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ stats_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    stats_data: "{{ stats_result.msg | default([]) if is_successful and stats_result.msg is iterable and stats_result.msg is not string else [] }}"

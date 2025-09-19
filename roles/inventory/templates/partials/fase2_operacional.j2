@@ -387,4 +387,66 @@
         <p>No hay datos de validación de DataGuard disponibles.</p>
     </div>
     {% endif %}
+
+    <!-- ESTADO DE ESTADÍSTICAS ORACLE -->
+    <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: Estadísticas Stale</h3>
+    <div class="summary-stats">
+        <p><strong>Criterio de Evaluación:</strong> Tablas con estadísticas obsoletas que requieren actualización</p>
+        {% if stats_results | length > 0 %}
+        {% set global_stale = stats_results | map(attribute='total_stale_tables') | map('int') | sum %}
+        <p><strong>Resumen Global:</strong> {{ global_stale }} tablas con estadísticas stale</p>
+        {% endif %}
+    </div>
+
+    {% if stats_results | length > 0 %}
+    <table class="operational-table">
+        <thead>
+            <tr>
+                <th>Instancia</th>
+                <th>Estado Validación</th>
+                <th>Tablas Stale</th>
+                <th>Owners Afectados</th>
+                <th>Estado General</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats_results %}
+            <tr class="{{ 'warning-alert' if stat.total_stale_tables | int > 0 else '' }}">
+                <td><strong>{{ stat.instancia | default('N/A') }}</strong></td>
+                <td>
+                    {% if stat.stats_validation_successful | default(false) %}
+                        <span class="status-success">EXITOSA</span>
+                    {% else %}
+                        <span class="status-danger">ERROR</span>
+                    {% endif %}
+                </td>
+                <td>{{ stat.total_stale_tables | default(0) }}</td>
+                <td>{{ stat.unique_owners | default(0) }}</td>
+                <td>
+                    {% if stat.total_stale_tables | default(0) | int > 0 %}
+                        <span class="status-warning">REQUIERE ATENCIÓN</span>
+                    {% else %}
+                        <span class="status-success">ACTUALIZADA</span>
+                    {% endif %}
+                </td>
+                <td>{{ (stat.validation_timestamp | default('N/A')) | regex_replace('T', ' ') | regex_replace('Z', '') }}</td>
+            </tr>
+            {% if not (stat.stats_validation_successful | default(false)) %}
+            <tr>
+                <td colspan="6">
+                    <div class="error-details">
+                        <strong>Error:</strong> {{ stat.stats_validation_error | default('Error desconocido') }}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="info-box">
+        <p>No hay datos de validación de estadísticas disponibles.</p>
+    </div>
+    {% endif %}
 </div>
