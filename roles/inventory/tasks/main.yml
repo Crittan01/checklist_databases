@@ -60,8 +60,8 @@
 # GENERAR REPORTE
 - name: "Generar reporte HTML"
   ansible.builtin.template:
-    src: "oracle_inventory_report.j2"
-    dest: "{{ ansible_env.PWD }}/reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
+    src: "oracle_dbcheck_report.j2"
+    dest: "{{ ansible_env.PWD }}/reports/oracle_dbcheck_report_{{ ansible_date_time.date }}.html"
     mode: "0644"
   vars:
     # VARIABLES DIRECTAS
