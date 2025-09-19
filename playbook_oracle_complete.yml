@@ -12,6 +12,7 @@
     diskgroup_results: []
     dataguard_results: []
     stats_results: []
+    fragmentation_results: []
 
   pre_tasks:
     - name: "Mostrar inicio del checklist completo"
@@ -86,9 +87,22 @@
         label: "{{ item.instancia_key }}"
       when: successful_connections | length > 0
 
+    # FASE 6: ESTADÍSTICAS (Solo si hay conexiones exitosas)
     - name: "FASE 6: Estadísticas {{ item.instancia_key }}"
       ansible.builtin.include_role:
         name: oracle_stats
+      vars:
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
+      loop: "{{ successful_connections }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+      when: successful_connections | length > 0
+
+    # FASE 7: FRAGMENTACIÓN (Solo si hay conexiones exitosas)
+    - name: "FASE 7: Fragmentación {{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_fragmentation
       vars:
         current_database_key: "{{ item.instancia_key }}"
         current_database: "{{ oracle_databases[item.instancia_key] }}"
@@ -110,22 +124,45 @@
         report_diskgroup_results: "{{ diskgroup_results }}"
         report_dataguard_results: "{{ dataguard_results }}"
         report_stats_results: "{{ stats_results }}"
+        report_fragmentation_results: "{{ fragmentation_results }}"
 
   post_tasks:
     - name: "Resumen ejecutivo"
       ansible.builtin.debug:
         msg:
           - "=== RESUMEN EJECUTIVO ==="
-          - "Conectividad: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}
+          - ""
+          - "CONECTIVIDAD:"
+          - "  Exitosas: {{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length }}
             /{{ connectivity_results | length }}"
-          - "Backups validados: {{ backup_results | length }}"
-          - "Jobs validados: {{ job_results | length }}"
-          - "Diskgroups validados: {{ diskgroup_results | default([]) | length }}"
-          - "DataGuard validados: {{ dataguard_results | default([]) | length }}"
-          - "ALERTAS:"
-          - "  - Backups con error: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+          - "  Porcentaje: {{ ((connectivity_results | selectattr('connection_successful', 'equalto', true) | list | length
+            / connectivity_results | length * 100) | round(1)) if connectivity_results | length > 0 else 0 }}%"
+          - ""
+          - "VALIDACIONES EJECUTADAS:"
+          - "  - Backups validados: {{ backup_results | length }}"
+          - "  - Jobs validados: {{ job_results | length }}"
+          - "  - Diskgroups validados: {{ diskgroup_results | default([]) | length }}"
+          - "  - DataGuard validados: {{ dataguard_results | default([]) | length }}"
+          - "  - Estadísticas validados: {{ stats_results | default([]) | length }}"
+          - "  - Fragmentación validados: {{ fragmentation_results | default([]) | length }}"
+          - ""
+          - "ALERTAS CRÍTICAS ENCONTRADAS:"
+          - "  - Conectividad: {{ connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length }} bases sin acceso"
+          - "  - Backups fallidos: {{ backup_results | map(attribute='failed_backups') | map('int') | sum }}"
+          - "  - Bases sin ARCHIVELOG 12h: {{ backup_results | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length }}"
           - "  - Jobs broken: {{ job_results | map(attribute='broken_jobs_count') | map('int') | sum }}"
           - "  - Diskgroups críticos: {{ diskgroup_results | default([]) | map(attribute='total_critical_diskgroups') | map('int') | sum }}"
           - "  - DataGuard lag crítico: {{ dataguard_results | default([]) | map(attribute='critical_threads') | map('int') | sum }}"
-          - "  - Tablas con estadísticas stale: {{ stats_results | default([]) | map(attribute='total_stale_tables') | map('int') | sum }}"
-          - "Reporte: reports/oracle_inventory_report_{{ ansible_date_time.date }}.html"
+          - "  - Tablas estadísticas stale: {{ stats_results | default([]) | map(attribute='total_stale_tables') | map('int') | sum }}"
+          - "  - Tablas alta fragmentación: {{ fragmentation_results | default([]) | map(attribute='high_waste_count') | map('int') | sum }}"
+          - ""
+          - "TOTAL ALERTAS: {{ (connectivity_results | selectattr('connection_successful', 'equalto', false) | list | length) +
+            (backup_results | map(attribute='failed_backups') | map('int') | sum) +
+            (backup_results | selectattr('no_archivelog_in_12h', 'equalto', true) | list | length) +
+            (job_results | map(attribute='broken_jobs_count') | map('int') | sum) +
+            (diskgroup_results | default([]) | map(attribute='total_critical_diskgroups') | map('int') | sum) +
+            (dataguard_results | default([]) | map(attribute='critical_threads') | map('int') | sum) +
+            (stats_results | default([]) | map(attribute='total_stale_tables') | map('int') | sum) +
+            (fragmentation_results | default([]) | map(attribute='high_waste_count') | map('int') | sum) }}"
+          - ""
+          - "REPORTE HTML: reports/oracle_dbcheck_report_{{ ansible_date_time.date }}.html"

@@ -1,0 +1,18 @@
+---
+# Resumen de fragmentación - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de fragmentación"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de fragmentación.
+      Verifique conectividad o configuración de bases de datos.
+  when: fragmentation_results | length == 0
+
+- name: "Resumen ejecutivo de fragmentación"
+  ansible.builtin.debug:
+    msg:
+      - "=== FRAGMENTACIÓN DE TABLAS ORACLE ==="
+      - "Bases validadas: {{ fragmentation_results | length }}"
+      - "Tablas fragmentadas (TOP 10): {{ fragmentation_results | map(attribute='total_fragmented_tables') | map('int') | sum }}"
+      - "Con alto desperdicio (>100MB): {{ fragmentation_results | map(attribute='high_waste_count') | map('int') | sum }}"
+      - "Espacio total desperdiciado: {{ '{:.1f}'.format(fragmentation_results | map(attribute='total_wasted_space') | map('float') | sum) }}MB"
+      - "Estado general: {{ 'ATENCIÓN' if fragmentation_results | map(attribute='high_waste_count') | map('int') | sum > 0 else 'OK' }}"

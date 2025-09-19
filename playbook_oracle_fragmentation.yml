@@ -1,0 +1,46 @@
+---
+# Playbook modular - Solo Validación de Fragmentación
+- name: Oracle Table Fragmentation Validation Only
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    connectivity_results: []
+    fragmentation_results: []
+
+  tasks:
+    # Validación común
+    - name: "Validar parámetros"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: validate_target_database.yml
+
+    # Conectividad ligera (verificación básica)
+    - name: "Verificar acceso {{ item.key }}"
+      ansible.builtin.include_role:
+        name: oracle_conn
+        tasks_from: quick_check.yml
+      vars:
+        current_database_key: "{{ item.key }}"
+        current_database: "{{ item.value }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when: target_database is not defined or target_database == '' or item.key == target_database
+
+    # Validación de fragmentación
+    - name: "Validar fragmentación {{ item.instancia_key }}"
+      ansible.builtin.include_role:
+        name: oracle_fragmentation
+      vars:
+        current_database_key: "{{ item.instancia_key }}"
+        current_database: "{{ oracle_databases[item.instancia_key] }}"
+      loop: "{{ connectivity_results | selectattr('connection_successful', 'equalto', true) | list }}"
+      loop_control:
+        label: "{{ item.instancia_key }}"
+
+    # Resumen consolidado
+    - name: "Resumen de fragmentación"
+      ansible.builtin.include_role:
+        name: oracle_utils
+        tasks_from: fragmentation_summary.yml

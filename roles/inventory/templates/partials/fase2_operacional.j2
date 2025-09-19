@@ -280,7 +280,7 @@
                             <td>{{ '{:,}'.format(critical[6] | int) if critical[6] | string | length > 0 else 'N/A' }}</td>
                             <td>
                                 <strong style="color: {{ 'var(--danger-color)' if critical[7] | float > 95 else 'var(--warning-color)' }};">
-                                    {{ '{:.1f}'.format(critical[7] | float) }}%
+                                    {{ '{:.2f}'.format(critical[7] | float) }}%
                                 </strong>
                             </td>
                         </tr>
@@ -447,6 +447,110 @@
     {% else %}
     <div class="info-box">
         <p>No hay datos de validación de estadísticas disponibles.</p>
+    </div>
+    {% endif %}
+
+<!-- ESTADO DE FRAGMENTACIÓN DE TABLAS -->
+    <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: Fragmentación de Tablas (TOP 10)</h3>
+    <div class="summary-stats">
+        <p><strong>Criterio de Evaluación:</strong> Top 10 tablas con mayor espacio desperdiciado</p>
+        {% if fragmentation_results | length > 0 %}
+        {% set global_high_waste = fragmentation_results | map(attribute='high_waste_count') | map('int') | sum %}
+        {% set global_total_waste = fragmentation_results | map(attribute='total_wasted_space') | map('float') | sum %}
+        <p><strong>Resumen Global:</strong> {{ global_high_waste }} tablas con alto desperdicio (>100MB), Total desperdiciado: {{ '{:.2f}'.format(global_total_waste) }}MB</p>
+        {% endif %}
+    </div>
+
+    {% if fragmentation_results | length > 0 %}
+    <table class="operational-table">
+        <thead>
+            <tr>
+                <th>Instancia</th>
+                <th>Estado Validación</th>
+                <th>Tablas Fragmentadas</th>
+                <th>Alto Desperdicio (>100MB)</th>
+                <th>Total Desperdiciado (MB)</th>
+                <th>Estado General</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for frag in fragmentation_results %}
+            <tr class="{{ 'warning-alert' if frag.high_waste_count | int > 0 else '' }}">
+                <td><strong>{{ frag.instancia | default('N/A') }}</strong></td>
+                <td>
+                    {% if frag.fragmentation_validation_successful | default(false) %}
+                        <span class="status-success">EXITOSA</span>
+                    {% else %}
+                        <span class="status-danger">ERROR</span>
+                    {% endif %}
+                </td>
+                <td>{{ frag.total_fragmented_tables | default(0) }}</td>
+                <td>{{ frag.high_waste_count | default(0) }}</td>
+                <td>{{ '{:.2f}'.format(frag.total_wasted_space | default(0) | float) }}</td>
+                <td>
+                    {% if frag.high_waste_count | default(0) | int > 0 %}
+                        <span class="status-warning">REQUIERE ATENCIÓN</span>
+                    {% else %}
+                        <span class="status-success">OPTIMO</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if not (frag.fragmentation_validation_successful | default(false)) %}
+            <tr>
+                <td colspan="6">
+                    <div class="error-details">
+                        <strong>Error:</strong> {{ frag.fragmentation_validation_error | default('Error desconocido') }}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- DETALLE DE TABLAS FRAGMENTADAS -->
+    {% set global_fragmented = fragmentation_results | map(attribute='total_fragmented_tables') | map('int') | sum %}
+    {% if global_fragmented > 0 %}
+    <div style="margin-top: 20px;">
+        <h4>DETALLE: TOP Tablas Fragmentadas ({{ global_fragmented }} encontradas)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Instancia</th>
+                    <th>Owner</th>
+                    <th>Tabla</th>
+                    <th>Tamaño Total (MB)</th>
+                    <th>Datos Reales (MB)</th>
+                    <th>Espacio Desperdiciado (MB)</th>
+                    <th>% Desperdicio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for frag in fragmentation_results %}
+                    {% for table in (frag.fragmentation_data | default([])) %}
+                    <tr class="{{ 'warning-alert' if table[4] | float > 100 else '' }}">
+                        <td><strong>{{ frag.instancia }}</strong></td>
+                        <td>{{ table[0] | default('N/A') }}</td>
+                        <td>{{ table[1] | default('N/A') }}</td>
+                        <td>{{ '{:.2f}'.format(table[2] | float) }}</td>
+                        <td>{{ '{:.2f}'.format(table[3] | float) }}</td>
+                        <td>
+                            <strong style="color: {{ 'var(--warning-color)' if table[4] | float > 100 else 'var(--dark-color)' }};">
+                                {{ '{:.2f}'.format(table[4] | float) }}
+                            </strong>
+                        </td>
+                        <td>{{ '{:.2f}'.format((table[4] | float / table[2] | float * 100) if table[2] | float > 0 else 0) }}%</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="info-box">
+        <p>No hay datos de validación de fragmentación disponibles.</p>
     </div>
     {% endif %}
 </div>

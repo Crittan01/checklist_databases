@@ -1,0 +1,82 @@
+---
+# tasks file for roles/oracle_fragmentation
+- name: "Tablas fragmentadas {{ current_database_key }}"
+  mi_org.oracle.oracle_sql_async:
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
+    sql: |
+      select *
+      from (select owner, table_name,
+               round((blocks * 8)/1024, 2) as size_mb,
+               round(((num_rows * avg_row_len / 1024)/1024), 2) as actual_data_mb,
+               (round(((blocks * 8)/1024), 2) -  round(((num_rows * avg_row_len / 1024)/1024), 2)) as wasted_space_mb
+          from dba_tables
+         where (round((blocks * 8), 2) >
+               round((num_rows * avg_row_len / 1024), 2))
+         order by 5 desc)
+      WHERE ROWNUM <= 10
+    mode: normal
+  register: fragmentation_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar fragmentación {{ current_database_key }}"
+  ansible.builtin.set_fact:
+    fragmentation_results: "{{ fragmentation_results + [fragmentation_item] }}"
+  vars:
+    # Detección de errores usando regex
+    msg_string: "{{ fragmentation_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ fragmentation_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+
+    # Datos solo si es exitoso
+    fragmentation_data:
+      "{{ fragmentation_result.msg | default([]) if is_successful
+      and fragmentation_result.msg is iterable and fragmentation_result.msg is not string else [] }}"
+
+    # Análisis de tablas con mayor desperdicio (> 100MB desperdiciado)
+    high_waste_tables: "{{ fragmentation_data | selectattr('4', 'greaterthan', 100) | list }}"
+
+    fragmentation_item:
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
+
+      # Estado de validación
+      fragmentation_validation_successful: "{{ is_successful }}"
+      fragmentation_validation_error: "{{ fragmentation_result.msg | default('') if not is_successful else '' }}"
+
+      # Datos y análisis
+      fragmentation_data: "{{ fragmentation_data }}"
+      high_waste_tables: "{{ high_waste_tables }}"
+
+      # Alertas específicas
+      has_high_fragmentation: "{{ high_waste_tables | length > 0 }}"
+      total_wasted_space: "{{ fragmentation_data | map(attribute='4') | map('float') | sum if fragmentation_data | length > 0 else 0 }}"
+
+      # Contadores simplificados
+      total_fragmented_tables: "{{ fragmentation_data | length }}"
+      high_waste_count: "{{ high_waste_tables | length }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Resumen fragmentación {{ current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "{{ current_database_key }}: {{ fragmentation_data | length }} tablas fragmentadas,
+        {{ high_waste_tables | length }} con alto desperdicio (>100MB), total desperdiciado:
+        {{ '{:.1f}'.format(fragmentation_data | map(attribute='4') | map('float') | sum if fragmentation_data | length > 0 else 0) }}MB"
+  vars:
+    msg_string: "{{ fragmentation_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ fragmentation_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    fragmentation_data:
+      "{{ fragmentation_result.msg | default([]) if is_successful
+      and fragmentation_result.msg is iterable and fragmentation_result.msg is not string else [] }}"
+    high_waste_tables: "{{ fragmentation_data | selectattr('4', 'greaterthan', 100) | list }}"
