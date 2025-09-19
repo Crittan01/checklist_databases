@@ -1,0 +1,18 @@
+---
+# Resumen de DataGuard - CENTRALIZADO
+- name: "Verificar ejecución de validaciones de DataGuard"
+  ansible.builtin.fail:
+    msg: |
+      ADVERTENCIA: No se ejecutaron validaciones de DataGuard.
+      Verifique conectividad o configuración de bases de datos.
+  when: dataguard_results | length == 0
+
+- name: "Resumen ejecutivo de DataGuard"
+  ansible.builtin.debug:
+    msg:
+      - "=== DATAGUARD ORACLE ==="
+      - "Bases validadas: {{ dataguard_results | length }}"
+      - "Threads con lag crítico (>5): {{ dataguard_results | map(attribute='critical_threads') | map('int') | sum }}"
+      - "Lag máximo encontrado: {{ dataguard_results | map(attribute='max_lag') | max }}"
+      - "Bases con problemas: {{ dataguard_results | selectattr('has_critical_lag', 'equalto', true) | list | length }}"
+      - "Estado general: {{ 'CRÍTICO' if dataguard_results | map(attribute='critical_threads') | map('int') | sum > 0 else 'OK' }}"

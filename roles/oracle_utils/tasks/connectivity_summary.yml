@@ -1,5 +1,5 @@
 ---
-# Resumen de conectividad - CENTRALIZADO
+# Resumen de conectividad -
 - name: "Verificar ejecución de validaciones"
   ansible.builtin.fail:
     msg: |

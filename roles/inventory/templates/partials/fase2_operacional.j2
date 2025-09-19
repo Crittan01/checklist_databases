@@ -297,4 +297,94 @@
         <p>No hay datos de validación de diskgroups disponibles.</p>
     </div>
     {% endif %}
+
+    <!-- ESTADO DE DATAGUARD ORACLE -->
+    <h3 style="color: var(--primary-color); margin-top: 40px;">ESTADO: DataGuard (Lag > 5)</h3>
+    <div class="summary-stats">
+        <p><strong>Criterio de Evaluación:</strong> Threads con diferencia de secuencias > 5</p>
+        {% if dataguard_results | length > 0 %}
+        {% set global_critical_lag = dataguard_results | map(attribute='critical_threads') | map('int') | sum %}
+        <p><strong>Resumen Global:</strong> {{ global_critical_lag }} threads críticos encontrados</p>
+        {% endif %}
+    </div>
+
+    {% if dataguard_results | length > 0 %}
+    <table class="operational-table">
+        <thead>
+            <tr>
+                <th>Instancia</th>
+                <th>Estado Validación</th>
+                <th>Total Threads</th>
+                <th>Threads Críticos</th>
+                <th>Lag Máximo</th>
+                <th>Estado General</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dg in dataguard_results %}
+            <tr class="{{ 'critical-alert' if dg.critical_threads | int > 0 else '' }}">
+                <td><strong>{{ dg.instancia | default('N/A') }}</strong></td>
+                <td>
+                    {% if dg.dataguard_validation_successful | default(false) %}
+                        <span class="status-success">EXITOSA</span>
+                    {% else %}
+                        <span class="status-danger">ERROR</span>
+                    {% endif %}
+                </td>
+                <td>{{ dg.total_threads | default(0) }}</td>
+                <td>{{ dg.critical_threads | default(0) }}</td>
+                <td>{{ dg.max_lag | default(0) }}</td>
+                <td>
+                    {% if dg.critical_threads | default(0) | int > 0 %}
+                        <span class="status-danger">CRÍTICO</span>
+                    {% else %}
+                        <span class="status-success">SIN LAG</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- DETALLE DE LAG CRÍTICO -->
+    {% set global_critical_lag = dataguard_results | map(attribute='critical_threads') | map('int') | sum %}
+    {% if global_critical_lag > 0 %}
+    <div style="margin-top: 20px;">
+        <h4>DETALLE: Threads con Lag Crítico ({{ global_critical_lag }} encontrados)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Instancia</th>
+                    <th>Thread</th>
+                    <th>Recibido</th>
+                    <th>Aplicada</th>
+                    <th>Diferencia</th>
+                    <th>Hora Recibido</th>
+                    <th>Hora Aplicada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dg in dataguard_results %}
+                    {% for critical in (dg.critical_lag | default([])) %}
+                    <tr class="critical-alert">
+                        <td><strong>{{ dg.instancia }}</strong></td>
+                        <td>{{ critical[0] | default('N/A') }}</td>
+                        <td>{{ critical[1] | default('N/A') }}</td>
+                        <td>{{ critical[3] | default('N/A') }}</td>
+                        <td><strong>{{ critical[5] | default('N/A') }}</strong></td>
+                        <td>{{ critical[2] | default('N/A') }}</td>
+                        <td>{{ critical[4] | default('N/A') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="info-box">
+        <p>No hay datos de validación de DataGuard disponibles.</p>
+    </div>
+    {% endif %}
 </div>

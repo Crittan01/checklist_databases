@@ -1,0 +1,89 @@
+---
+# tasks file for roles/oracle_dataguard
+- name: "DataGuard lag {{ current_database_key }}"
+  mi_org.oracle.oracle_sql_async:
+    hostname: "{{ current_database.direccion_ip }}"
+    port: "{{ current_database.puerto }}"
+    service_name: "{{ current_database.cadena_tns }}"
+    username: "{{ current_database.usuario }}"
+    password: "{{ current_database.password }}"
+    sql: |
+      SELECT
+        ARCH.THREAD# as thread_num,
+        ARCH.SEQUENCE# as recibido,
+        TO_CHAR(ARCH.FIRST_TIME, 'DD-MON-YYYY HH24:MI:SS') as hora_recibido,
+        APPL.SEQUENCE# as aplicada,
+        TO_CHAR(APPL.FIRST_TIME, 'DD-MON-YYYY HH24:MI:SS') as hora_aplicada,
+        (ARCH.SEQUENCE# - APPL.SEQUENCE#) as diferencia
+      FROM
+      (SELECT THREAD#, SEQUENCE#, FIRST_TIME
+       FROM V$ARCHIVED_LOG
+       WHERE (THREAD#, FIRST_TIME) IN
+         (SELECT THREAD#, MAX(FIRST_TIME) FROM V$ARCHIVED_LOG GROUP BY THREAD#)) ARCH,
+      (SELECT THREAD#, SEQUENCE#, FIRST_TIME
+       FROM V$LOG_HISTORY
+       WHERE (THREAD#, FIRST_TIME) IN
+         (SELECT THREAD#, MAX(FIRST_TIME) FROM V$LOG_HISTORY GROUP BY THREAD#)) APPL
+      WHERE ARCH.THREAD# = APPL.THREAD#
+      ORDER BY 1
+    mode: normal
+  register: dataguard_result
+  failed_when: false
+  timeout: "{{ oracle_timeout }}"
+
+- name: "Procesar DataGuard {{ current_database_key }}"
+  ansible.builtin.set_fact:
+    dataguard_results: "{{ dataguard_results + [dataguard_item] }}"
+  vars:
+    # Detección de errores usando regex
+    msg_string: "{{ dataguard_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ dataguard_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+
+    # Datos solo si es exitoso
+    dataguard_data: "{{ dataguard_result.msg | default([]) if is_successful
+      and dataguard_result.msg is iterable and dataguard_result.msg is not string else [] }}"
+
+    # Análisis de lag crítico (diferencia > 5)
+    critical_lag_list: "{{ dataguard_data | selectattr('5', 'greaterthan', 5) | list }}"
+
+    dataguard_item:
+      instancia_key: "{{ current_database_key }}"
+      instancia: "{{ current_database.instancia }}"
+      host: "{{ current_database.host }}"
+      direccion_ip: "{{ current_database.direccion_ip }}"
+
+      # Estado de validación
+      dataguard_validation_successful: "{{ is_successful }}"
+      dataguard_validation_error: "{{ dataguard_result.msg | default('') if not is_successful else '' }}"
+
+      # Datos y análisis
+      dataguard_data: "{{ dataguard_data }}"
+      critical_lag: "{{ critical_lag_list }}"
+
+      # Alertas específicas
+      has_critical_lag: "{{ critical_lag_list | length > 0 }}"
+      max_lag: "{{ dataguard_data | map(attribute='5') | max if dataguard_data | length > 0 else 0 }}"
+
+      # Contadores simplificados
+      total_threads: "{{ dataguard_data | length }}"
+      critical_threads: "{{ critical_lag_list | length }}"
+      total_critical_lag: "{{ critical_lag_list | length }}"
+
+      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: "Resumen DataGuard {{ current_database_key }}"
+  ansible.builtin.debug:
+    msg:
+      - "{{ current_database_key }}: {{ dataguard_data | length }} threads,
+        {{ critical_lag_list | length }} con lag crítico (>5), máximo lag: {{ dataguard_data | map(attribute='5') | max
+        if dataguard_data | length > 0 else 0 }}"
+  vars:
+    msg_string: "{{ dataguard_result.msg | default('') | string }}"
+    has_oracle_error: "{{ msg_string is search('ORA-') or msg_string is search('TNS-') }}"
+    has_failed: "{{ dataguard_result.failed | default(false) }}"
+    is_successful: "{{ not has_failed and not has_oracle_error }}"
+    dataguard_data: "{{ dataguard_result.msg | default([]) if is_successful
+      and dataguard_result.msg is iterable and dataguard_result.msg is not string else [] }}"
+    critical_lag_list: "{{ dataguard_data | selectattr('5', 'greaterthan', 5) | list }}"
