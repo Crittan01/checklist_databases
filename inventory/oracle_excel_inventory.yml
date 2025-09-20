@@ -1,9 +1,0 @@
----
-plugin: oracle_excel_inventory
-file_path: "inventory/InventarioBD.xlsx"
-sheet_name: "ORACLE"
-
-# Filtros dinámicos desde AWX/AAP (opcional)
-environment_filter: "{{ target_environment | default('') }}"
-company_filter: "{{ target_company | default('') }}"
-datacenter_filter: "{{ target_datacenter | default('') }}"
