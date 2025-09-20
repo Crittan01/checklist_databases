@@ -5,7 +5,7 @@ source_type: local
 sheet_name: "ORACLE"
 
 local_config:
-  file_path: "bases_de_datos/ansible-checklist-databases/inventory/InventarioBD.xlsx"
+  file_path: "inventory/InventarioBD.xlsx"
 
 hostname_column: "Instancia"
 
