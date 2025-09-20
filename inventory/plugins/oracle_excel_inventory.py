@@ -147,7 +147,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
             required_columns = [
                 'Instancia', 'Host', 'Direccion_IP', 'Cadena_TNS',
                 'Ambiente', 'Motor_BD', 'Sistema_Operativo', 
-                'Release SO', 'Release_BD'
+                'Release_SO', 'Release_BD'
             ]
             
             missing_columns = [col for col in required_columns if col not in df.columns]
