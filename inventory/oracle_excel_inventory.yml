@@ -1,6 +1,6 @@
 ---
 plugin: oracle_excel_inventory
-file_path: "inventory/InventarioBD.xlsx"
+file_path: "/runner/project/bases_de_datos/ansible-checklist-databases/inventory/InventarioBD.xlsx"
 sheet_name: "ORACLE"
 
 # Filtros dinámicos desde AWX/AAP (opcional)
