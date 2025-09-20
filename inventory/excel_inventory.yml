@@ -5,7 +5,7 @@ source_type: local
 sheet_name: "ORACLE"
 
 local_config:
-  file_path: "inventory/InventarioBD.xlsx"
+  file_path: "checklist_databases/inventory/InventarioBD.xlsx"
 
 hostname_column: "Instancia"
 
