@@ -214,7 +214,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         column_names = {
             'instancia': ['Instancia', 'Instance', 'instancia', 'INSTANCIA'],
             'host': ['Host', 'hostname', 'server', 'HOST'],
-            'direccion_ip': ['Dirección IP', 'IP Address', 'IP', 'direccion_ip', 'DIRECCION_IP'],
+            'direccion_ip': ['Dirección IP', 'IP Address', 'IP', 'direccion_ip', 'Direccion_IP'],
             'cadena_tns': ['Cadena TNS', 'TNS', 'tns_name', 'cadena_tns', 'CADENA_TNS'],
             'motor_bd': ['Motor BD', 'Database Engine', 'engine', 'MOTOR_BD'],
             'sistema_operativo': ['Sistema Operativo', 'OS', 'operating_system', 'SISTEMA_OPERATIVO'],
