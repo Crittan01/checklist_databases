@@ -1,7 +1,7 @@
 # Configuración del plugin Oracle Excel Inventory
 plugin: oracle_excel_inventory
 excel_file: InventarioBD.xlsx
-sheet_name: Oracle
+sheet_name: ORACLE
 default_port: 1521
 validate_data: true
 
