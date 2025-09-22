@@ -5,8 +5,8 @@
     hostname: "{{ current_database.direccion_ip }}"
     port: "{{ current_database.puerto }}"
     service_name: "{{ current_database.cadena_tns }}"
-    username: "{{ current_database.usuario }}"
-    password: "{{ current_database.password }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
     sql: "SELECT 1 FROM dual"
     mode: normal
   register: quick_result
