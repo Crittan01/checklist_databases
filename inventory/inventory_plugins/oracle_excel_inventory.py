@@ -110,7 +110,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         # Validar tamaño (máximo 50MB para evitar problemas de memoria)
         file_size = os.path.getsize(excel_path) / (1024 * 1024)  # MB
         if file_size > 50:
-            self.display.warning(f"⚠️  Large Excel file ({file_size:.1f}MB). Consider optimizing.")
+            self.display.warning(f"Large Excel file ({file_size:.1f}MB). Consider optimizing.")
 
     def _create_inventory(self, oracle_databases):
         """Crea la estructura de inventario simple"""
@@ -172,7 +172,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                         
                         # Verificar duplicados
                         if instancia in oracle_databases:
-                            self.display.warning(f"⚠️  Duplicate instance '{instancia}' in row {row_num}, skipping")
+                            self.display.warning(f"Duplicate instance '{instancia}' in row {row_num}, skipping")
                             continue
                         
                         oracle_databases[instancia] = db_config
@@ -180,7 +180,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                         
                 except Exception as e:
                     error_count += 1
-                    self.display.warning(f"⚠️  Error in row {row_num}: {str(e)}")
+                    self.display.warning(f"Error in row {row_num}: {str(e)}")
                     continue
             
             workbook.close()
