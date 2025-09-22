@@ -1,0 +1,6 @@
+---
+plugin: oracle_excel_inventory
+file_path: "inventory/InventarioBD.xlsx"
+sheet_name: "ORACLE"
+# No hay filtros aquí - el plugin carga TODOS los datos
+# Los filtros se aplican dinámicamente en playbooks usando survey variables
