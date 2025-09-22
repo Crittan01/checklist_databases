@@ -102,10 +102,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
     def _validate_excel_file(self, excel_path):
         """Validaciones de seguridad y existencia del archivo"""
         if not os.path.exists(excel_path):
-            raise AnsibleParserError(f"❌ Excel file not found: {excel_path}")
+            raise AnsibleParserError(f"ERROR: Excel file not found: {excel_path}")
         
         if not os.access(excel_path, os.R_OK):
-            raise AnsibleParserError(f"❌ Cannot read Excel file: {excel_path}")
+            raise AnsibleParserError(f"ERROR: Cannot read Excel file: {excel_path}")
         
         # Validar tamaño (máximo 50MB para evitar problemas de memoria)
         file_size = os.path.getsize(excel_path) / (1024 * 1024)  # MB
@@ -145,7 +145,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
             # Verificar que la hoja existe
             if sheet_name not in workbook.sheetnames:
                 available_sheets = ", ".join(workbook.sheetnames)
-                raise AnsibleParserError(f"❌ Sheet '{sheet_name}' not found. Available sheets: {available_sheets}")
+                raise AnsibleParserError(f"ERROR: Sheet '{sheet_name}' not found. Available sheets: {available_sheets}")
             
             worksheet = workbook[sheet_name]
             
@@ -189,12 +189,12 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
             self.display.v(f"📊 Processed {processed_count} databases, {error_count} errors")
             
             if not oracle_databases:
-                raise AnsibleParserError("❌ No valid Oracle databases found in Excel file")
+                raise AnsibleParserError("ERROR: No valid Oracle databases found in Excel file")
             
         except Exception as e:
             if isinstance(e, AnsibleParserError):
                 raise
-            raise AnsibleParserError(f"❌ Error reading Excel file {excel_path}: {str(e)}")
+            raise AnsibleParserError(f"ERROR: Reading Excel file {excel_path}: {str(e)}")
         
         return oracle_databases
 
@@ -250,7 +250,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 missing_columns.append(col)
         
         if missing_columns:
-            raise AnsibleParserError(f"❌ Missing required columns: {', '.join(missing_columns)}")
+            raise AnsibleParserError(f"ERROR: Missing required columns: {', '.join(missing_columns)}")
 
     def _process_excel_row(self, row, column_mapping, default_port, validate_data):
         """Procesa una fila del Excel y retorna configuración de BD"""
