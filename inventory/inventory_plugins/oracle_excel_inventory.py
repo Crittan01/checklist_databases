@@ -22,7 +22,7 @@ DOCUMENTATION = r'''
         sheet_name:
             description: Sheet name to read from Excel
             required: false
-            default: 'Oracle'
+            default: 'ORACLE'
             type: str
         default_port:
             description: Default Oracle port
@@ -40,7 +40,7 @@ EXAMPLES = r'''
 # oracle_excel_inventory.yml
 plugin: oracle_excel_inventory
 excel_file: InventarioBD.xlsx
-sheet_name: Oracle
+sheet_name: ORACLE
 default_port: 1521
 validate_data: true
 '''
