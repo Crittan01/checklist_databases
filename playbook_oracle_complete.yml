@@ -24,6 +24,15 @@
 
   tasks:
     # FASE 1: CONECTIVIDAD
+    - name: DEBUG Fase 1
+      ansible.builtin.debug:
+        msg:
+          - "Key: {{ item.key }}"
+          - "Value: {{ item.value }}"
+      loop: "{{ oracle_databases | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
     - name: "FASE 1: Conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
