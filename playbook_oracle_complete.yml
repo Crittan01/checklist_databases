@@ -36,6 +36,7 @@
     - name: "FASE 1: Conectividad {{ item.key }}"
       ansible.builtin.include_role:
         name: oracle_conn
+        tasks_from: quick_check.yml
       vars:
         current_database_key: "{{ item.key }}"
         current_database: "{{ item.value }}"
