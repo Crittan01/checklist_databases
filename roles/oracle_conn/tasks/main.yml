@@ -5,8 +5,8 @@
     hostname: "{{ current_database.direccion_ip }}"
     port: "{{ current_database.port }}"
     service_name: "{{ current_database.cadena_tns }}"
-    username: "{{ current_database.usuario }}"
-    password: "{{ current_database.password }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
     sql: |
       SELECT
         '{{ current_database_key }}' as instancia_key,
