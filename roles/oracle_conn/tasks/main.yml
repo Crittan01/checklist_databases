@@ -3,7 +3,7 @@
 - name: "Conexión completa a {{ current_database_key }}"
   mi_org.oracle.oracle_sql_async:
     hostname: "{{ current_database.direccion_ip }}"
-    port: "{{ current_database.puerto }}"
+    port: "{{ current_database.port }}"
     service_name: "{{ current_database.cadena_tns }}"
     username: "{{ current_database.usuario }}"
     password: "{{ current_database.password }}"
