@@ -1,6 +1,11 @@
----
+# Configuración del plugin Oracle Excel Inventory
 plugin: oracle_excel_inventory
-file_path: "inventory/InventarioBD.xlsx"
-sheet_name: "ORACLE"
-# No hay filtros aquí - el plugin carga TODOS los datos
-# Los filtros se aplican dinámicamente en playbooks usando survey variables
+excel_file: InventarioBD.xlsx
+sheet_name: Oracle
+default_port: 1521
+validate_data: true
+
+# Configuración de cache para AWX (opcional)
+cache: true
+cache_plugin: jsonfile
+cache_timeout: 1800 # 30 minutos
